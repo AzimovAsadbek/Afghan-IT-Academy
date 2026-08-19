@@ -1,0 +1,10 @@
+# Fast pre-commit gate.
+#
+# Only staged files are checked, so this stays quick. The full `pnpm verify`
+# runs in CI; a slow hook just gets bypassed with --no-verify, which defeats
+# the purpose.
+#
+# --concurrent false is required, not a preference: type-aware ESLint builds a
+# full TypeScript project service per process, and running several in parallel
+# exhausts memory and gets them SIGKILLed.
+pnpm exec lint-staged --concurrent false

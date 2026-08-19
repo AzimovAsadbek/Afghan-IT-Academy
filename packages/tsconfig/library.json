@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Afghan IT Academy — Shared Library",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "composite": true
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "@afghan-it-academy/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*", "*.config.mts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "@afghan-it-academy/tsconfig/nest.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*", "test/**/*", "*.config.ts", "*.config.mts"],
+  "exclude": ["node_modules", "dist", "generated"]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Afghan IT Academy — NestJS API",
+  "extends": "./base.json",
+  "compilerOptions": {
+    /* NodeNext + no "type": "module" in package.json emits CommonJS, which is
+     * what NestJS expects, while keeping resolution modern. TypeScript 6
+     * deprecated the classic `moduleResolution: node10`, so this is also the
+     * forward-compatible pairing. Imports therefore carry explicit `.js`
+     * extensions. */
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    /* NestJS relies on decorator metadata for DI and validation. */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    /* Decorators legitimately require property initialisation to be deferred. */
+    "strictPropertyInitialization": false,
+
+    "sourceMap": true,
+    "declaration": false,
+    "declarationMap": false
+  }
+}

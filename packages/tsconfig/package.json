@@ -1,0 +1,12 @@
+{
+  "name": "@afghan-it-academy/tsconfig",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "files": [
+    "base.json",
+    "next.json",
+    "nest.json",
+    "library.json"
+  ]
+}

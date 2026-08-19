@@ -1,0 +1,43 @@
+{
+  "name": "@afghan-it-academy/web",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3000",
+    "start": "node .next/standalone/apps/web/server.js",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rimraf .next .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@afghan-it-academy/shared": "workspace:*",
+    "@afghan-it-academy/ui": "workspace:*",
+    "@swc/helpers": "0.5.23",
+    "@tanstack/react-query": "5.101.4",
+    "next": "16.3.1",
+    "next-intl": "4.13.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@afghan-it-academy/eslint-config": "workspace:*",
+    "@afghan-it-academy/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "4.3.3",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "eslint": "10.8.1",
+    "jsdom": "29.1.1",
+    "rimraf": "6.0.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  }
+}

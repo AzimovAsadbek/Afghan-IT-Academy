@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+
+/* Tailwind v4 auto-detects content but skips node_modules — and workspace
+   packages resolve through a symlink inside it. Without this, any utility used
+   only by @afghan-it-academy/ui is never generated, and the component renders
+   with its colours applied (because the app happens to use the same colour
+   elsewhere) but no sizing. Register the package source explicitly. */
+@source '../../../../packages/ui/src';
+
+/* ---------------------------------------------------------------------------
+   Design tokens
+   ---------------------------------------------------------------------------
+   Tailwind v4 is configured in CSS rather than a JS config file. Everything
+   declared in @theme becomes a utility class and a CSS custom property, so the
+   same token is available to Tailwind classes and to hand-written CSS.
+
+   Palette is derived from the approved homepage design: deep navy chrome,
+   indigo primary, with accent hues reserved for course-category cards.
+--------------------------------------------------------------------------- */
+@theme {
+  /* Brand */
+  --color-brand-50: oklch(0.97 0.014 265);
+  --color-brand-100: oklch(0.93 0.032 265);
+  --color-brand-200: oklch(0.87 0.062 265);
+  --color-brand-300: oklch(0.78 0.104 265);
+  --color-brand-400: oklch(0.68 0.152 265);
+  --color-brand-500: oklch(0.59 0.191 265);
+  --color-brand-600: oklch(0.52 0.203 265);
+  --color-brand-700: oklch(0.45 0.185 265);
+  --color-brand-800: oklch(0.38 0.152 265);
+  --color-brand-900: oklch(0.31 0.115 265);
+
+  /* Navigation and footer chrome */
+  --color-ink-900: oklch(0.21 0.041 265);
+  --color-ink-800: oklch(0.27 0.045 265);
+  --color-ink-700: oklch(0.34 0.045 265);
+
+  /* Semantic */
+  --color-success: oklch(0.68 0.152 152);
+  --color-warning: oklch(0.76 0.152 75);
+  --color-danger: oklch(0.58 0.216 25);
+
+  /* Typography — the stacks are set per-direction in :root[dir] below. */
+  --font-sans: var(--font-latin), system-ui, sans-serif;
+  --font-arabic: var(--font-arabic), 'Noto Sans Arabic', system-ui, sans-serif;
+
+  /* Line height needs more room for Arabic-script diacritics than for Latin. */
+  --leading-arabic: 1.85;
+
+  --radius-card: 0.875rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Direction-aware base styles
+   ---------------------------------------------------------------------------
+   `dir` is set on <html> by the layout from the active locale. Everything below
+   keys off it, so no component needs to know which language it is rendering.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+}
+
+html[dir='rtl'] body {
+  font-family: var(--font-arabic);
+  line-height: var(--leading-arabic);
+}
+
+html[dir='ltr'] body {
+  font-family: var(--font-sans);
+}
+
+body {
+  background-color: var(--color-white);
+  color: var(--color-ink-900);
+  /* Prevent iOS from inflating text in one orientation only. */
+  text-size-adjust: 100%;
+}
+
+/* Respect a reader who has asked the OS to reduce motion. Also a bandwidth and
+   battery win on the low-end devices this product targets. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A visible, high-contrast focus ring is a requirement, not a default to strip.
+   Keyboard navigation is the primary input for screen-reader users. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+/* Skip link: hidden until focused, then pinned to the logical start edge so it
+   lands correctly in both RTL and LTR. */
+.skip-link {
+  position: absolute;
+  inset-block-start: -3rem;
+  inset-inline-start: 1rem;
+  z-index: 50;
+  transition: inset-block-start 0.15s ease;
+}
+
+.skip-link:focus {
+  inset-block-start: 1rem;
+}

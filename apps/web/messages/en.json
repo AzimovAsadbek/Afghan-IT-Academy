@@ -1,0 +1,27 @@
+{
+  "metadata": {
+    "siteName": "Afghan IT Academy",
+    "title": "Afghan IT Academy — Learn IT and English",
+    "description": "Learn IT, English and AI to a professional level. Practical skills, real projects and internationally recognised certificates."
+  },
+  "common": {
+    "skipToContent": "Skip to main content",
+    "language": "Language",
+    "changeLanguage": "Change language",
+    "loading": "Loading",
+    "retry": "Try again",
+    "error": "Something went wrong"
+  },
+  "home": {
+    "eyebrow": "Build your future with us",
+    "headline": "Learn IT and English to a professional level",
+    "subheadline": "Afghan IT Academy — modern knowledge, practical skills, one step towards an international certificate.",
+    "primaryCta": "Browse courses",
+    "secondaryCta": "Watch the video",
+    "status": {
+      "heading": "Platform status",
+      "foundation": "Foundation milestone",
+      "description": "The platform foundation is in place. Course catalogue, learning player and assessments are being built next."
+    }
+  }
+}

@@ -1,0 +1,134 @@
+// Afghan IT Academy — database schema.
+//
+// Scope of this file at the foundation milestone: identity core and audit log
+// only. The learning, assessment, commerce and gamification domains are
+// specified in docs/database/ and land with the modules that own them —
+// creating their tables now would freeze a design we have not built against.
+
+// Prisma 7 removed `url` from the datasource block: the connection is supplied
+// by a driver adapter at runtime (src/infrastructure/prisma) and by
+// prisma.config.ts for migrations. This also drops the Rust query engine
+// binary, which takes ~40 MB off the production image.
+// Generated into an explicit, predictable directory rather than into the
+// @prisma/client package inside the pnpm store. The store copy is wiped by any
+// reinstall, and `pnpm deploy` produces a tree whose store does not contain the
+// generated client at all — so the container built, started, and crashed with
+// "Cannot find module '.prisma/client/default'". An explicit path is
+// deterministic for local dev, CI and Docker alike.
+//
+// Because the output sits outside node_modules, apps/api must declare
+// @prisma/client-runtime-utils directly — pnpm only links declared dependencies
+// into a package's own node_modules, and the generated code requires it at
+// runtime. Keep that version in lockstep with @prisma/client.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Mirrors LOCALES in @afghan-it-academy/shared. Kept as an enum so the database
+/// rejects an unsupported locale instead of storing it and failing at render.
+enum Locale {
+  en
+  fa_AF @map("fa-AF")
+  ps_AF @map("ps-AF")
+}
+
+/// Coarse-grained role. Fine-grained capabilities are permission-based and live
+/// in the authorization module; this is only the top-level bucket.
+enum UserRole {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
+enum UserStatus {
+  /// Registered but has not proven control of the email address.
+  PENDING_VERIFICATION
+  ACTIVE
+  /// Temporarily blocked, e.g. repeated failed logins.
+  SUSPENDED
+  /// Deactivated by the user or an admin. Retained for referential integrity.
+  DISABLED
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id String @id @default(cuid())
+
+  /// Stored lower-cased and trimmed by the application layer; the unique index
+  /// is therefore a genuine "one account per address" guarantee.
+  email         String  @unique
+  emailVerified Boolean @default(false)
+
+  /// Argon2id digest. Null for accounts that only use a federated provider.
+  /// Never selected into any DTO — see docs/security/.
+  passwordHash String?
+
+  displayName String
+  role        UserRole   @default(STUDENT)
+  status      UserStatus @default(PENDING_VERIFICATION)
+
+  /// UI language. Also used for transactional email and certificate rendering.
+  preferredLocale Locale @default(fa_AF)
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  auditLogs AuditLog[]
+
+  /// Supports the catalogue/admin listings that filter by role and status.
+  @@index([status, role])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+/// Append-only record of security-relevant actions.
+///
+/// Deliberately denormalised: `actorId` is nullable and not a cascading foreign
+/// key, because the log must survive deletion of the account it describes —
+/// that is precisely when it matters most.
+model AuditLog {
+  id String @id @default(cuid())
+
+  /// Dotted action token, e.g. `auth.login.failed`, `user.role.changed`.
+  action String
+
+  /// Type and id of the affected entity, stored loosely so any domain can write
+  /// here without this table depending on every other table.
+  entityType String?
+  entityId   String?
+
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  /// Truncated to a /24 (IPv4) or /48 (IPv6) prefix before storage: enough to
+  /// investigate abuse, not enough to track an individual learner.
+  ipPrefix  String?
+  userAgent String?
+
+  /// Non-sensitive contextual detail. Never store credentials or tokens here.
+  metadata Json?
+
+  requestId String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

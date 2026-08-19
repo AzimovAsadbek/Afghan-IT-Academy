@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push supersedes an in-flight run for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege by default; a job that needs more declares it.
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+  PNPM_VERSION: '9.12.3'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Static checks — no infrastructure required, so they fail fast.
+  # ---------------------------------------------------------------------------
+  quality:
+    name: Format, lint, typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm run format:check
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+  # ---------------------------------------------------------------------------
+  # Unit tests and builds.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Unit tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+        env:
+          # Next inlines this at build time; the real value comes from the
+          # deployment environment, not from CI.
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api
+
+  # ---------------------------------------------------------------------------
+  # End-to-end against real Postgres and Redis. Catches what mocks cannot:
+  # migrations that do not apply, connections that do not open, middleware
+  # ordering, and the actual security headers on the wire.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: API e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: aia
+          POSTGRES_PASSWORD: aia_ci_password
+          POSTGRES_DB: afghan_it_academy_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U aia -d afghan_it_academy_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+      redis:
+        image: redis:8-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://aia:aia_ci_password@localhost:5432/afghan_it_academy_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      CORS_ORIGINS: http://localhost:3000
+      LOG_LEVEL: warn
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations
+        run: pnpm --filter @afghan-it-academy/api run prisma:deploy
+
+      - name: Run e2e suite
+        run: pnpm --filter @afghan-it-academy/api run test:e2e
+
+  # ---------------------------------------------------------------------------
+  # Secret scanning. The repository is public: a leaked key must be caught
+  # before it is pushed, not after it is indexed.
+  # ---------------------------------------------------------------------------
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # gitleaks needs history to scan the commits in a push, not just the tree.
+          fetch-depth: 0
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # Dependency vulnerabilities. Advisory-only for now: a new critical advisory
+  # in a transitive dependency should not block an unrelated fix from merging.
+  # Promote to a required check once the audit baseline is clean and stable.
+  # ---------------------------------------------------------------------------
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit
+        run: pnpm audit --audit-level=high

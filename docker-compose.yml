@@ -1,0 +1,60 @@
+# Local development infrastructure.
+#
+# Application containers are intentionally NOT defined here: running web and API
+# on the host keeps hot reload fast and avoids bind-mount I/O penalties on
+# Windows. This file provides the stateful services only.
+#
+#   pnpm db:up     start Postgres and Redis
+#   pnpm db:down   stop them
+#
+# Production images are built from apps/*/Dockerfile and orchestrated
+# separately; see docs/infrastructure/.
+
+name: afghan-it-academy
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: aia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aia_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-afghan_it_academy}
+      # Collation-aware indexes behave differently across locales; pin it so
+      # local, CI and production all sort identically.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      # Bound to loopback only: never expose a development database on the LAN.
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-aia} -d ${POSTGRES_DB:-afghan_it_academy}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:8-alpine
+    container_name: aia-redis
+    restart: unless-stopped
+    # Persistence on: rate-limit counters and job queues should survive a
+    # restart, and appendonly is the durable option.
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  postgres-data:
+  redis-data:

@@ -1,0 +1,36 @@
+{
+  "name": "@afghan-it-academy/shared",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "clean": "rimraf dist .turbo *.tsbuildinfo",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@afghan-it-academy/eslint-config": "workspace:*",
+    "@afghan-it-academy/tsconfig": "workspace:*",
+    "eslint": "10.8.1",
+    "rimraf": "6.0.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  }
+}
