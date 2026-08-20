@@ -22,3 +22,4 @@ export {
   type PublicUser,
 } from './users/index.js';
 export { AuthService, type LoginRefusal, type LoginResult } from './auth/index.js';
+export { PermissionCache, RoleAssignmentService } from './authorization/index.js';

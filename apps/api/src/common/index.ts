@@ -1,3 +1,17 @@
+export {
+  ACTOR_RESOLVER,
+  AuthenticationGuard,
+  CurrentActor,
+  IS_PUBLIC,
+  PermissionsGuard,
+  Public,
+  REQUIRED_PERMISSIONS,
+  RequirePermissions,
+  actorOf,
+  type ActorResolver,
+  type AuthenticatedActor,
+  type RequestWithActor,
+} from './authorization/index.js';
 export { AllExceptionsFilter } from './filters/all-exceptions.filter.js';
 export { DomainException } from './exceptions/domain.exception.js';
 export { FieldValidationException } from './exceptions/field-validation.exception.js';

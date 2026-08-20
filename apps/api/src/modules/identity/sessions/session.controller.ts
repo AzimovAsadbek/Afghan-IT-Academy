@@ -1,0 +1,121 @@
+import { ERROR_CODES } from '@afghan-it-academy/shared';
+import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Req } from '@nestjs/common';
+import type { Request } from 'express';
+
+import {
+  CurrentActor,
+  DomainException,
+  clientContextOf,
+  type AuthenticatedActor,
+} from '../../../common/index.js';
+import { AuditService } from '../../audit/index.js';
+import { AUTH_ACTIONS } from '../auth-actions.js';
+import { UserService, type PublicUser } from '../users/index.js';
+import { SessionService, type SessionSummary } from './session.service.js';
+
+/**
+ * The signed-in user's own account and devices.
+ *
+ * Every route here is authenticated by the global guard. None declares a
+ * permission, because acting on your own account is authorised by ownership, not
+ * by a capability — and ownership is checked against the actor's own id rather
+ * than anything in the URL.
+ */
+@Controller({ path: 'me', version: '1' })
+export class SessionController {
+  constructor(
+    private readonly sessions: SessionService,
+    private readonly users: UserService,
+    private readonly audit: AuditService,
+  ) {}
+
+  /** The current user, their roles and effective permissions. */
+  @Get()
+  async me(@CurrentActor() actor: AuthenticatedActor): Promise<PublicUser> {
+    const user = await this.users.findPublic(actor.userId);
+
+    if (!user) {
+      // The session resolved but the account is gone — a deleted user with a
+      // live session. Treat as unauthenticated rather than 500.
+      throw new DomainException(
+        ERROR_CODES.UNAUTHENTICATED,
+        HttpStatus.UNAUTHORIZED,
+        'Account no longer exists.',
+      );
+    }
+
+    return user;
+  }
+
+  /** Devices currently signed in, with the present one flagged. */
+  @Get('sessions')
+  async listSessions(@CurrentActor() actor: AuthenticatedActor): Promise<SessionSummary[]> {
+    return this.sessions.list(actor.userId, actor.sessionId);
+  }
+
+  /**
+   * Revokes one session.
+   *
+   * The id comes from the URL, so ownership is verified before acting. Skipping
+   * that check is the textbook IDOR: any signed-in user could sign out any
+   * other by guessing an id.
+   */
+  @Delete('sessions/:sessionId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async revokeSession(
+    @Param('sessionId') sessionId: string,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Req() request: Request,
+  ): Promise<void> {
+    const owned = await this.sessions.belongsTo(sessionId, actor.userId);
+
+    if (!owned) {
+      // Deliberately the same response as a session that does not exist:
+      // distinguishing them confirms which ids are real.
+      throw new DomainException(
+        ERROR_CODES.NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+        'No such session for this account.',
+      );
+    }
+
+    await this.sessions.revoke(sessionId, 'USER_LOGOUT');
+
+    await this.audit.record(
+      {
+        action: AUTH_ACTIONS.SESSION_REVOKED,
+        actorId: actor.userId,
+        entityType: 'Session',
+        entityId: sessionId,
+      },
+      clientContextOf(request),
+    );
+  }
+
+  /** Signs out every other device, keeping the current one. */
+  @Post('sessions/revoke-others')
+  @HttpCode(HttpStatus.OK)
+  async revokeOthers(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Req() request: Request,
+  ): Promise<{ revoked: number }> {
+    const revoked = await this.sessions.revokeAllForUser(
+      actor.userId,
+      'USER_LOGOUT_ALL',
+      actor.sessionId,
+    );
+
+    await this.audit.record(
+      {
+        action: AUTH_ACTIONS.SESSIONS_REVOKED_ALL,
+        actorId: actor.userId,
+        entityType: 'User',
+        entityId: actor.userId,
+        metadata: { revoked },
+      },
+      clientContextOf(request),
+    );
+
+    return { revoked };
+  }
+}

@@ -10,12 +10,16 @@ import {
   Req,
   Res,
   UnauthorizedException,
-  UsePipes,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 
-import { DomainException, ZodValidationPipe, clientContextOf } from '../../../common/index.js';
+import {
+  DomainException,
+  Public,
+  ZodValidationPipe,
+  clientContextOf,
+} from '../../../common/index.js';
 import { ENV, type Env } from '../../../config/index.js';
 import { AUTH_ACTIONS } from '../auth-actions.js';
 import { AuditService } from '../../audit/index.js';
@@ -58,6 +62,13 @@ const HOUR = 60 * MINUTE;
  * Registration, resend and verification report the same result regardless of
  * whether the address is known. See AuthService for why.
  */
+/*
+ * Public as a class: these endpoints are how a caller *obtains* a session, so
+ * requiring one would be circular. Logout is included deliberately — signing out
+ * must succeed even when the session has already expired, or the browser is left
+ * holding cookies it cannot clear.
+ */
+@Public()
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
   constructor(
@@ -70,9 +81,8 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.ACCEPTED)
   @Throttle({ default: { limit: 5, ttl: HOUR } })
-  @UsePipes(new ZodValidationPipe(registerSchema))
   async register(
-    @Body() body: RegisterInput,
+    @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
     @Req() request: Request,
   ): Promise<{ status: string }> {
     await this.auth.register(body, clientContextOf(request));
@@ -85,9 +95,8 @@ export class AuthController {
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: HOUR } })
-  @UsePipes(new ZodValidationPipe(verifyEmailSchema))
   async verifyEmail(
-    @Body() body: VerifyEmailInput,
+    @Body(new ZodValidationPipe(verifyEmailSchema)) body: VerifyEmailInput,
     @Req() request: Request,
   ): Promise<{ status: string }> {
     const result = await this.auth.verifyEmail(body.token, clientContextOf(request));
@@ -104,9 +113,8 @@ export class AuthController {
   @Post('resend-verification')
   @HttpCode(HttpStatus.ACCEPTED)
   @Throttle({ default: { limit: 5, ttl: HOUR } })
-  @UsePipes(new ZodValidationPipe(resendVerificationSchema))
   async resendVerification(
-    @Body() body: ResendVerificationInput,
+    @Body(new ZodValidationPipe(resendVerificationSchema)) body: ResendVerificationInput,
     @Req() request: Request,
   ): Promise<{ status: string }> {
     await this.auth.resendVerification(body.email, clientContextOf(request));
@@ -118,9 +126,8 @@ export class AuthController {
   // Five attempts per address per fifteen minutes. Enough for a person who has
   // forgotten which password they used; far too few to work through a list.
   @Throttle({ default: { limit: 5, ttl: 15 * MINUTE } })
-  @UsePipes(new ZodValidationPipe(loginSchema))
   async login(
-    @Body() body: LoginInput,
+    @Body(new ZodValidationPipe(loginSchema)) body: LoginInput,
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<{ status: string }> {

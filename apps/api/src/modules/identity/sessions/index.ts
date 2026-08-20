@@ -1,3 +1,4 @@
+export { SessionController } from './session.controller.js';
 export { SessionStore, type ActiveSession } from './session-store.js';
 export {
   SessionService,

@@ -1,8 +1,15 @@
 import { Module } from '@nestjs/common';
 
+import { ACTOR_RESOLVER } from '../../common/index.js';
 import { AuthController, AuthService } from './auth/index.js';
+import {
+  PermissionCache,
+  RoleAssignmentService,
+  RoleController,
+  SessionActorResolver,
+} from './authorization/index.js';
 import { PasswordService, TokenService } from './crypto/index.js';
-import { SessionService, SessionStore } from './sessions/index.js';
+import { SessionController, SessionService, SessionStore } from './sessions/index.js';
 import { OneTimeTokenService } from './tokens/index.js';
 import { UserService } from './users/index.js';
 
@@ -18,7 +25,7 @@ import { UserService } from './users/index.js';
  * commits that follow.
  */
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, SessionController, RoleController],
   providers: [
     AuthService,
     PasswordService,
@@ -27,7 +34,23 @@ import { UserService } from './users/index.js';
     SessionService,
     OneTimeTokenService,
     UserService,
+    PermissionCache,
+    RoleAssignmentService,
+
+    /* Identity supplies the implementation of the authentication port that the
+     * guards in common depend on. Binding it here, at composition time, is what
+     * keeps every other domain free of any dependency on this module. */
+    { provide: ACTOR_RESOLVER, useClass: SessionActorResolver },
   ],
-  exports: [PasswordService, TokenService, SessionService, OneTimeTokenService, UserService],
+  exports: [
+    PasswordService,
+    TokenService,
+    SessionService,
+    OneTimeTokenService,
+    UserService,
+    PermissionCache,
+    RoleAssignmentService,
+    ACTOR_RESOLVER,
+  ],
 })
 export class IdentityModule {}

@@ -7,6 +7,7 @@ import {
   VERSION_NEUTRAL,
 } from '@nestjs/common';
 
+import { Public } from '../../common/index.js';
 import { PrismaService } from '../../infrastructure/prisma/index.js';
 import { RedisService } from '../../infrastructure/redis/index.js';
 
@@ -35,6 +36,7 @@ interface ReadinessResponse {
  * Version-neutral on purpose: probe URLs are configured in Kubernetes manifests
  * and load balancers, so they must not move when the API ships a v2.
  */
+@Public()
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {
   constructor(
