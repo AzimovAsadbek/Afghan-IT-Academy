@@ -9,6 +9,7 @@ import { AppConfigModule, ENV, type Env } from './config/index.js';
 import { PrismaModule } from './infrastructure/prisma/index.js';
 import { RedisModule, RedisService } from './infrastructure/redis/index.js';
 import { HealthModule } from './modules/health/index.js';
+import { IdentityModule } from './modules/identity/index.js';
 
 /**
  * Application composition root.
@@ -51,6 +52,7 @@ import { HealthModule } from './modules/health/index.js';
     }),
 
     HealthModule,
+    IdentityModule,
   ],
   providers: [
     /* Applied globally: rate limiting must be opt-out per route, never opt-in.

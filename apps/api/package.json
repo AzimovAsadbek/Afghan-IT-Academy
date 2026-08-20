@@ -30,6 +30,7 @@
     "@nestjs/platform-express": "11.2.1",
     "@nestjs/terminus": "11.1.1",
     "@nestjs/throttler": "6.5.0",
+    "@node-rs/argon2": "2.1.0",
     "@prisma/adapter-pg": "7.9.1",
     "@prisma/client": "7.9.1",
     "@prisma/client-runtime-utils": "7.9.1",
