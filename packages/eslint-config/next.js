@@ -54,7 +54,7 @@ export const nextConfig = tseslint.config(
         'error',
         {
           selector:
-            'JSXAttribute[name.name="className"] > Literal[value=/(^|\s)(ml|mr|pl|pr|left|right|border-l|border-r|rounded-l|rounded-r|text-left|text-right)-/]',
+            'JSXAttribute[name.name="className"] > Literal[value=/(^|\\s)((ml|mr|pl|pr|left|right|border-l|border-r|rounded-l|rounded-r|float-left|float-right)-|text-(left|right)(\\s|$))/]',
           message:
             'Use CSS logical properties so the layout mirrors in Dari/Pashto: ms-/me-, ps-/pe-, start-/end-, border-s-/border-e-, text-start/text-end.',
         },

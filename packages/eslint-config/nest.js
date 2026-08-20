@@ -1,22 +1,29 @@
 import tseslint from 'typescript-eslint';
 
 import { baseConfig } from './base.js';
+import { boundariesPlugin } from './module-boundaries.js';
 
 /**
  * NestJS API configuration.
  *
- * The `no-restricted-imports` block below is the mechanical enforcement of the
- * modular-monolith boundary documented in docs/architecture/. Modules talk to
- * each other through their public entry point only; reaching into another
- * module's internals is what quietly turns a modular monolith into a big ball
- * of mud, and it is cheap to prevent at lint time.
+ * Module boundaries (ADR 0002) are enforced by `boundaries/module-boundaries`,
+ * a local rule that works on resolved file paths. The `no-restricted-imports`
+ * entries below stay for the restrictions that genuinely are string-shaped —
+ * `process.env`, `dotenv`, and deep `@prisma/client` paths.
  */
 export const nestConfig = tseslint.config(
   ...baseConfig,
 
   {
     files: ['**/*.ts'],
+    plugins: { boundaries: boundariesPlugin },
     rules: {
+      /* Reaching into another module's internals is what quietly turns a
+       * modular monolith into a big ball of mud, and it is cheap to prevent at
+       * lint time — provided the rule actually fires, which the previous
+       * specifier-matching approach did not. See module-boundaries.js. */
+      'boundaries/module-boundaries': 'error',
+
       /* Decorators are the framework's idiom; these rules fight them. */
       '@typescript-eslint/no-extraneous-class': 'off',
       '@typescript-eslint/no-unnecessary-type-parameters': 'off',
@@ -31,11 +38,6 @@ export const nestConfig = tseslint.config(
         'error',
         {
           patterns: [
-            {
-              group: ['../../modules/*/*', '**/modules/*/!(index)*'],
-              message:
-                'Cross-module deep imports are forbidden. Import a module through its public index barrel, or expose a service via its module exports.',
-            },
             {
               group: ['@prisma/client/*'],
               message: 'Import Prisma types from the package root.',

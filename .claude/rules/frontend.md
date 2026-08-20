@@ -32,7 +32,13 @@ behind `NEXT_PUBLIC_`.
 Tailwind v4, configured in CSS (`app/globals.css`), not a JS config file.
 
 **Logical properties only.** `ms-`/`me-`, `ps-`/`pe-`, `start-`/`end-`,
-`text-start`/`text-end`, `border-s-`/`border-e-`. Physical utilities fail lint.
+`text-start`/`text-end`, `border-s-`/`border-e-`. Physical utilities fail lint
+anywhere in a `className` string literal.
+
+The rule covers `className` string literals only. Template literals, variant maps
+and conditional class expressions are not checked — assert on the rendered
+`className` in a component test instead, as `packages/ui/src/button.test.tsx`
+does.
 
 Use design tokens from `@theme` (`bg-brand-600`, `text-ink-900`). Do not
 introduce a raw hex value in a component.

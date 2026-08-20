@@ -7,12 +7,15 @@
   "exports": {
     "./base": "./base.js",
     "./next": "./next.js",
-    "./nest": "./nest.js"
+    "./nest": "./nest.js",
+    "./plain": "./plain.js"
   },
   "files": [
     "base.js",
     "next.js",
-    "nest.js"
+    "nest.js",
+    "plain.js",
+    "module-boundaries.js"
   ],
   "dependencies": {
     "@eslint/js": "10.0.1",
@@ -26,5 +29,13 @@
   "peerDependencies": {
     "eslint": "^10.0.0",
     "typescript": "^6.0.0"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "4.1.11"
   }
 }
