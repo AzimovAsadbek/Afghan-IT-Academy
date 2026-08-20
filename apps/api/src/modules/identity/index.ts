@@ -8,3 +8,17 @@ export {
   type RefreshResult,
   type SessionSummary,
 } from './sessions/index.js';
+export {
+  OneTimeTokenService,
+  type IssuedOneTimeToken,
+  type RedemptionFailure,
+  type RedemptionResult,
+} from './tokens/index.js';
+export {
+  LOCKOUT_DURATION_MS,
+  MAX_FAILED_LOGINS,
+  UserService,
+  type AuthenticatableUser,
+  type PublicUser,
+} from './users/index.js';
+export { AuthService, type LoginRefusal, type LoginResult } from './auth/index.js';

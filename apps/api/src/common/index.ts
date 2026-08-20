@@ -1,4 +1,5 @@
 export { AllExceptionsFilter } from './filters/all-exceptions.filter.js';
+export { DomainException } from './exceptions/domain.exception.js';
 export { FieldValidationException } from './exceptions/field-validation.exception.js';
 export { buildLoggerConfig } from './logging/logger.config.js';
 export type { RequestWithId } from './http/request-with-id.js';

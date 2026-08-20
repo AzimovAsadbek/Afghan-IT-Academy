@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 
+import { AuthController, AuthService } from './auth/index.js';
 import { PasswordService, TokenService } from './crypto/index.js';
 import { SessionService, SessionStore } from './sessions/index.js';
+import { OneTimeTokenService } from './tokens/index.js';
+import { UserService } from './users/index.js';
 
 /**
  * Identity: accounts, credentials, sessions and authorization.
@@ -15,7 +18,16 @@ import { SessionService, SessionStore } from './sessions/index.js';
  * commits that follow.
  */
 @Module({
-  providers: [PasswordService, TokenService, SessionStore, SessionService],
-  exports: [PasswordService, TokenService, SessionService],
+  controllers: [AuthController],
+  providers: [
+    AuthService,
+    PasswordService,
+    TokenService,
+    SessionStore,
+    SessionService,
+    OneTimeTokenService,
+    UserService,
+  ],
+  exports: [PasswordService, TokenService, SessionService, OneTimeTokenService, UserService],
 })
 export class IdentityModule {}
