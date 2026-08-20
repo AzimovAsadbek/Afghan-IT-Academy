@@ -168,7 +168,15 @@ describe('One-time tokens (e2e)', () => {
 
     it('ignores issues outside the window', async () => {
       await tokens.issue(userId, 'PASSWORD_RESET', HOUR_MS, null);
-      expect(await tokens.countRecent(userId, 'PASSWORD_RESET', 1)).toBe(0);
+
+      // Wait well past the window being queried. A 1ms window was racy: on a
+      // fast runner the row is created inside the same millisecond and counts
+      // as recent, which failed in CI while passing locally.
+      await new Promise((resolve) => setTimeout(resolve, 60));
+
+      expect(await tokens.countRecent(userId, 'PASSWORD_RESET', 20)).toBe(0);
+      // And still visible over a window that genuinely contains it.
+      expect(await tokens.countRecent(userId, 'PASSWORD_RESET', HOUR_MS)).toBe(1);
     });
   });
 
