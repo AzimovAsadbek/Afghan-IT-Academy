@@ -8,8 +8,10 @@ import { buildLoggerConfig } from './common/index.js';
 import { AppConfigModule, ENV, type Env } from './config/index.js';
 import { PrismaModule } from './infrastructure/prisma/index.js';
 import { RedisModule, RedisService } from './infrastructure/redis/index.js';
+import { AuditModule } from './modules/audit/index.js';
 import { HealthModule } from './modules/health/index.js';
 import { IdentityModule } from './modules/identity/index.js';
+import { NotificationsModule } from './modules/notifications/index.js';
 
 /**
  * Application composition root.
@@ -50,6 +52,9 @@ import { IdentityModule } from './modules/identity/index.js';
         errorMessage: 'Too many requests.',
       }),
     }),
+
+    AuditModule,
+    NotificationsModule,
 
     HealthModule,
     IdentityModule,
