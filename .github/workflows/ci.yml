@@ -112,11 +112,16 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 10
 
+    # Mirrors .env.example. A variable added to envSchema must be added here
+    # too, or the API refuses to start and the whole suite fails at boot — which
+    # is the schema working as designed, and easy to miss when local .env
+    # already has it.
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://aia:aia_ci_password@localhost:5432/afghan_it_academy_test?schema=public
       REDIS_URL: redis://localhost:6379
       CORS_ORIGINS: http://localhost:3000
+      WEB_APP_URL: http://localhost:3000
       LOG_LEVEL: warn
 
     steps:

@@ -37,8 +37,12 @@ one is a convention rather than a rule.
 Inject the `ENV` token and read a typed property. Never call `process.env`
 outside `src/config` — the lint rule blocks it.
 
-Adding a variable means: add it to `envSchema`, add it to `.env.example`, and
-add a test case. Secrets get no default value.
+Adding a variable means four edits, not three: `envSchema`, `.env.example`, a
+test case, **and the e2e job's `env:` block in `.github/workflows/ci.yml`**.
+
+Miss the last one and everything passes locally — where `.env` already has the
+value — while CI fails at application boot with a config error, because the
+schema is doing exactly what it should. It has happened once.
 
 ## Validation
 
