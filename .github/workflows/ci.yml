@@ -134,6 +134,12 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # The API imports @afghan-it-academy/shared, whose package.json main points
+      # at dist/. Without this the suite fails to resolve the entry before a
+      # single test runs — it only passed locally because dist/ was already there.
+      - name: Build workspace dependencies
+        run: pnpm --filter @afghan-it-academy/shared run build
+
       - name: Apply migrations
         run: pnpm --filter @afghan-it-academy/api run prisma:deploy
 
