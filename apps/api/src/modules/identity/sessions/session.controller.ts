@@ -1,16 +1,29 @@
 import { ERROR_CODES } from '@afghan-it-academy/shared';
-import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Req,
+} from '@nestjs/common';
 import type { Request } from 'express';
 
 import {
   CurrentActor,
   DomainException,
+  ZodValidationPipe,
   clientContextOf,
   type AuthenticatedActor,
 } from '../../../common/index.js';
 import { AuditService } from '../../audit/index.js';
+import { changePasswordSchema, type ChangePasswordInput } from '../auth/auth.dto.js';
+import { PasswordRecoveryService } from '../auth/password.service.js';
 import { AUTH_ACTIONS } from '../auth-actions.js';
-import { UserService, type PublicUser } from '../users/index.js';
+import { UserService, type PublicUser } from '../users/user.service.js';
 import { SessionService, type SessionSummary } from './session.service.js';
 
 /**
@@ -27,6 +40,7 @@ export class SessionController {
     private readonly sessions: SessionService,
     private readonly users: UserService,
     private readonly audit: AuditService,
+    private readonly recovery: PasswordRecoveryService,
   ) {}
 
   /** The current user, their roles and effective permissions. */
@@ -90,6 +104,40 @@ export class SessionController {
       },
       clientContextOf(request),
     );
+  }
+
+  /**
+   * Changes the password.
+   *
+   * The current password is required even though the session already proves
+   * identity: a session left open on a shared machine must not be enough to take
+   * the account permanently. Every other device is signed out, because a
+   * password change is usually a response to "someone may have my password" and
+   * leaving their session alive makes the change theatre.
+   */
+  @Post('password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Body(new ZodValidationPipe(changePasswordSchema)) body: ChangePasswordInput,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Req() request: Request,
+  ): Promise<{ revokedSessions: number }> {
+    const result = await this.recovery.change(
+      actor.userId,
+      actor.sessionId,
+      body,
+      clientContextOf(request),
+    );
+
+    if (!result.ok) {
+      throw new DomainException(
+        ERROR_CODES.INVALID_CREDENTIALS,
+        HttpStatus.UNAUTHORIZED,
+        'Current password is incorrect.',
+      );
+    }
+
+    return { revokedSessions: result.revokedSessions };
   }
 
   /** Signs out every other device, keeping the current one. */

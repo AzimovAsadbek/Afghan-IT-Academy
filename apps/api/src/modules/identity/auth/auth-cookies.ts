@@ -1,7 +1,7 @@
 import type { CookieOptions, Request, Response } from 'express';
 
 import type { Env } from '../../../config/index.js';
-import type { IssuedSession } from '../sessions/index.js';
+import type { IssuedSession } from '../sessions/session.service.js';
 
 export const ACCESS_COOKIE = 'aia_at';
 export const REFRESH_COOKIE = 'aia_rt';

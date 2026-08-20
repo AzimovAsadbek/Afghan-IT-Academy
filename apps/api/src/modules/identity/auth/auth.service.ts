@@ -7,10 +7,10 @@ import { PrismaService, toDomainLocale } from '../../../infrastructure/prisma/in
 import { AuditService } from '../../audit/index.js';
 import { EMAIL_SENDER, type EmailSender } from '../../notifications/index.js';
 import { AUTH_ACTIONS } from '../auth-actions.js';
-import { PasswordService } from '../crypto/index.js';
-import { SessionService, type IssuedSession } from '../sessions/index.js';
-import { OneTimeTokenService } from '../tokens/index.js';
-import { UserService, type AuthenticatableUser } from '../users/index.js';
+import { PasswordService } from '../crypto/password.service.js';
+import { SessionService, type IssuedSession } from '../sessions/session.service.js';
+import { OneTimeTokenService } from '../tokens/one-time-token.service.js';
+import { UserService, type AuthenticatableUser } from '../users/user.service.js';
 
 /** Why a sign-in attempt was refused. Only ever revealed to a correct password. */
 export type LoginRefusal =

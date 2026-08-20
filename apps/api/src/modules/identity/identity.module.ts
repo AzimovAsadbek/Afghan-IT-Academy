@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { ACTOR_RESOLVER } from '../../common/index.js';
-import { AuthController, AuthService } from './auth/index.js';
+import { AuthController, AuthService, PasswordRecoveryService } from './auth/index.js';
 import {
   PermissionCache,
   RoleAssignmentService,
@@ -28,6 +28,7 @@ import { UserService } from './users/index.js';
   controllers: [AuthController, SessionController, RoleController],
   providers: [
     AuthService,
+    PasswordRecoveryService,
     PasswordService,
     TokenService,
     SessionStore,

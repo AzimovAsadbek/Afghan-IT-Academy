@@ -61,3 +61,32 @@ export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export const resendVerificationSchema = z.object({ email: emailSchema }).strict();
 
 export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
+
+export const forgotPasswordSchema = z.object({ email: emailSchema }).strict();
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    token: oneTimeTokenSchema,
+    newPassword: passwordSchema,
+  })
+  .strict();
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const changePasswordSchema = z
+  .object({
+    // Not passwordSchema: the current password may predate a policy change, and
+    // refusing it here would stop the owner reaching the very screen that lets
+    // them fix it.
+    currentPassword: z.string().min(1, 'required').max(128, 'too_long'),
+    newPassword: passwordSchema,
+  })
+  .strict()
+  .refine((value) => value.currentPassword !== value.newPassword, {
+    path: ['newPassword'],
+    message: 'must_differ',
+  });
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

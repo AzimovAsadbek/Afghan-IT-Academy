@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { ENV, type Env } from '../../../config/index.js';
 import { RedisService } from '../../../infrastructure/redis/index.js';
-import { TokenService } from '../crypto/index.js';
+import { TokenService } from '../crypto/token.service.js';
 
 /** What an access token resolves to. Kept minimal — it is read on every request. */
 export interface ActiveSession {

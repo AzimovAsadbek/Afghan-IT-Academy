@@ -3,9 +3,9 @@ import { Injectable } from '@nestjs/common';
 import type { Request } from 'express';
 
 import type { ActorResolver, AuthenticatedActor } from '../../../common/index.js';
-import { readAccessToken } from '../auth/index.js';
-import { SessionService } from '../sessions/index.js';
-import { UserService } from '../users/index.js';
+import { readAccessToken } from '../auth/auth-cookies.js';
+import { SessionService } from '../sessions/session.service.js';
+import { UserService } from '../users/user.service.js';
 import { PermissionCache } from './permission-cache.js';
 
 /**

@@ -23,7 +23,7 @@ import {
 import { ENV, type Env } from '../../../config/index.js';
 import { AUTH_ACTIONS } from '../auth-actions.js';
 import { AuditService } from '../../audit/index.js';
-import { SessionService } from '../sessions/index.js';
+import { SessionService } from '../sessions/session.service.js';
 import {
   clearSessionCookies,
   readAccessToken,
@@ -31,16 +31,21 @@ import {
   setSessionCookies,
 } from './auth-cookies.js';
 import {
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
   resendVerificationSchema,
+  resetPasswordSchema,
   verifyEmailSchema,
+  type ForgotPasswordInput,
   type LoginInput,
   type RegisterInput,
   type ResendVerificationInput,
+  type ResetPasswordInput,
   type VerifyEmailInput,
 } from './auth.dto.js';
 import { AuthService, type LoginRefusal } from './auth.service.js';
+import { PasswordRecoveryService } from './password.service.js';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -75,6 +80,7 @@ export class AuthController {
     private readonly auth: AuthService,
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
+    private readonly recovery: PasswordRecoveryService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -194,6 +200,53 @@ export class AuthController {
     // side — otherwise the UI shows a signed-in user who cannot do anything.
     clearSessionCookies(response, this.env);
     return { status: 'signed_out' };
+  }
+
+  /**
+   * Starts a password recovery.
+   *
+   * Always 202 with the same body. This endpoint requires no credential at all,
+   * which makes it the easiest place in the whole system to enumerate accounts —
+   * so an unknown address, a suspended account, a throttled account and a
+   * successful send are one response.
+   */
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle({ default: { limit: 5, ttl: HOUR } })
+  async forgotPassword(
+    @Body(new ZodValidationPipe(forgotPasswordSchema)) body: ForgotPasswordInput,
+    @Req() request: Request,
+  ): Promise<{ status: string }> {
+    await this.recovery.requestReset(body.email, clientContextOf(request));
+    return { status: 'recovery_email_sent' };
+  }
+
+  /** Completes a recovery and signs every device out. */
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: HOUR } })
+  async resetPassword(
+    @Body(new ZodValidationPipe(resetPasswordSchema)) body: ResetPasswordInput,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ status: string }> {
+    const result = await this.recovery.completeReset(
+      body.token,
+      body.newPassword,
+      clientContextOf(request),
+    );
+
+    if (!result.ok) {
+      throw new DomainException(
+        ERROR_CODES.SESSION_EXPIRED,
+        HttpStatus.FORBIDDEN,
+        'Reset link is invalid or has expired.',
+      );
+    }
+
+    // Every session is gone, including any this browser held.
+    clearSessionCookies(response, this.env);
+    return { status: 'password_reset' };
   }
 
   /**

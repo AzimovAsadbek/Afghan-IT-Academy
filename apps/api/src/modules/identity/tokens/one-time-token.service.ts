@@ -5,7 +5,7 @@ import {
   PrismaService,
   type PrismaTransactionClient,
 } from '../../../infrastructure/prisma/index.js';
-import { TokenService } from '../crypto/index.js';
+import { TokenService } from '../crypto/token.service.js';
 
 export interface IssuedOneTimeToken {
   /** The raw value. Exists here and in the email, nowhere else. */

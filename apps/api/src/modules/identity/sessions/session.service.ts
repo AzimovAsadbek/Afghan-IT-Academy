@@ -9,7 +9,7 @@ import {
   type PrismaTransactionClient,
 } from '../../../infrastructure/prisma/index.js';
 import { AuditService } from '../../audit/index.js';
-import { TokenService } from '../crypto/index.js';
+import { TokenService } from '../crypto/token.service.js';
 import { AUTH_ACTIONS } from '../auth-actions.js';
 import { SessionStore, type ActiveSession } from './session-store.js';
 
