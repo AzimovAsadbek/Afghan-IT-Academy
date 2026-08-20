@@ -27,3 +27,15 @@ export {
   type Paginated,
   type PaginationInput,
 } from './validation/primitives.js';
+
+export {
+  ALL_PERMISSIONS,
+  ALL_ROLES,
+  DEFAULT_ROLE,
+  PERMISSIONS,
+  ROLES,
+  isPermissionKey,
+  isRoleKey,
+  type PermissionKey,
+  type RoleKey,
+} from './authorization/permissions.js';

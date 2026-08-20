@@ -143,6 +143,11 @@ jobs:
       - name: Apply migrations
         run: pnpm --filter @afghan-it-academy/api run prisma:deploy
 
+      # Roles and permissions are reference data the e2e suite authorises
+      # against. The seed is convergent, so re-running it is always safe.
+      - name: Seed authorization catalogue
+        run: pnpm --filter @afghan-it-academy/api run db:seed
+
       - name: Run e2e suite
         run: pnpm --filter @afghan-it-academy/api run test:e2e
 
