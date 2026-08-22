@@ -59,6 +59,74 @@ Every non-2xx response uses one envelope:
 The API returns no user-facing prose. That is what lets one API serve Dari,
 Pashto and English without a redeploy to fix a translation.
 
+## Authentication
+
+Opaque session credentials in `httpOnly` cookies, resolved server-side. Design
+rationale is in [ADR 0006](../architecture/decisions/0006-opaque-sessions-and-refresh-rotation.md).
+
+| Cookie   | Contents      | SameSite | Path                   |
+| -------- | ------------- | -------- | ---------------------- |
+| `aia_at` | access token  | `Lax`    | `/`                    |
+| `aia_rt` | refresh token | `Strict` | `{API_PREFIX}/v1/auth` |
+
+Non-browser clients may present `Authorization: Bearer <access token>` instead.
+When both are present the cookie wins, so a browser cannot be tricked into
+authenticating with an attacker-supplied header.
+
+**Every endpoint requires authentication unless it is explicitly `@Public()`.**
+Endpoints that additionally require a capability declare it with
+`@RequirePermissions(...)` — see
+[ADR 0007](../architecture/decisions/0007-permission-based-authorization.md).
+
+### Endpoints
+
+| Method   | Path                                      | Auth       | Notes                                      |
+| -------- | ----------------------------------------- | ---------- | ------------------------------------------ |
+| `POST`   | `/api/v1/auth/register`                   | public     | `202`, body identical whether or not known |
+| `POST`   | `/api/v1/auth/verify-email`               | public     |                                            |
+| `POST`   | `/api/v1/auth/resend-verification`        | public     | `202`, uniform body                        |
+| `POST`   | `/api/v1/auth/login`                      | public     | sets both cookies                          |
+| `POST`   | `/api/v1/auth/refresh`                    | refresh    | rotates; replay revokes the token family   |
+| `POST`   | `/api/v1/auth/logout`                     | public     | must succeed on an already-expired session |
+| `POST`   | `/api/v1/auth/forgot-password`            | public     | `202`, uniform body                        |
+| `POST`   | `/api/v1/auth/reset-password`             | public     | revokes every session for the account      |
+| `GET`    | `/api/v1/me`                              | session    | never includes `passwordHash`              |
+| `GET`    | `/api/v1/me/sessions`                     | session    | flags the current session                  |
+| `DELETE` | `/api/v1/me/sessions/:sessionId`          | session    | owner-scoped in the query                  |
+| `POST`   | `/api/v1/me/sessions/revoke-others`       | session    |                                            |
+| `POST`   | `/api/v1/me/password`                     | session    | requires the current password              |
+| `POST`   | `/api/v1/admin/users/:userId/roles`       | permission | `user:assign_role`                         |
+| `DELETE` | `/api/v1/admin/users/:userId/roles/:role` | permission | `user:assign_role`                         |
+
+### Responses that deliberately tell you nothing
+
+Registration, resend, verification and forgot-password return the **same
+response whether or not the address is known**, and a wrong, expired or
+already-consumed token is a single indistinguishable failure.
+
+This is not vagueness for its own sake. A `201`/`409` split turns the register
+endpoint into an account-existence oracle for anyone willing to submit an
+address, and distinguishing "expired" from "wrong" tells a token-guessing
+attacker which guesses are close.
+
+Clients must therefore phrase these outcomes as "if that address is registered,
+we have sent a message" — the translated strings are written to that shape.
+
+### Auth-specific rate limits
+
+Tighter than the global default, per client address, on top of it:
+
+| Endpoint              | Limit          |
+| --------------------- | -------------- |
+| `register`            | 5 / hour       |
+| `resend-verification` | 5 / hour       |
+| `verify-email`        | 10 / hour      |
+| `login`               | 5 / 15 minutes |
+| `refresh`             | 60 / hour      |
+
+Per-_account_ limits, which per-address limits cannot provide, are enforced in
+`AuthService` alongside the brute-force lockout.
+
 ## Request correlation
 
 Send `x-request-id` and it is echoed back — but only if it matches

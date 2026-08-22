@@ -43,8 +43,15 @@ future surprise.
 
 ## Current state
 
-Foundation milestone. The platform skeleton is in place — locale routing,
-RTL/LTR, design tokens, API with health/observability/security baseline,
-database and migration workflow. No business features are implemented yet.
+Foundation is complete and tagged `v0.1.0-foundation`: locale routing, RTL/LTR,
+design tokens, API with health/observability/security baseline, database and
+migration workflow.
 
-Next: authentication, then the course catalogue. See [../roadmap/](../roadmap/).
+The **authentication milestone is in progress** on `feat/m002-auth`. Accounts,
+roles and permissions, sessions with refresh rotation, password recovery and
+audit logging are implemented and verified on the API. **The web client still
+has no authentication UI** — the only route that exists is the foundation
+landing page.
+
+Next: the authentication UI, then the course catalogue. See
+[../roadmap/](../roadmap/).

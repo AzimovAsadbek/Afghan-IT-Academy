@@ -41,10 +41,16 @@ Residual XSS risk is bounded by React escaping interpolated values and by
 `dangerouslySetInnerHTML` being absent from the codebase. Both are review items,
 not guarantees.
 
-**Upgrade trigger:** authenticated routes are dynamically rendered by necessity.
-When they land in the auth milestone, give them a nonce-based policy — Next
-stamps the nonce onto the scripts of a dynamically rendered document, so
-`'strict-dynamic'` works there.
+**Upgrade trigger — now due.** Authenticated routes are dynamically rendered by
+necessity. Next stamps a nonce onto the scripts of a dynamically rendered
+document, so `'strict-dynamic'` works there even though it cannot work on the
+static locale routes.
+
+The auth API has landed; the authentication UI has not. **The first
+authenticated route added to `apps/web` must carry a nonce-based policy**, with
+the existing `'unsafe-inline'` policy left in place for the statically
+pre-rendered marketing routes only. That means the CSP becomes per-route rather
+than global — plan for it when the auth UI is built, not after.
 
 ### Input and output
 
@@ -96,15 +102,70 @@ and forgery of adjacent records. Verified by e2e test.
 Audit-log IP addresses are truncated to a /24 (IPv4) or /48 (IPv6) prefix before
 storage: enough to investigate abuse, not enough to track an individual learner.
 
+### Authentication and authorization
+
+Landed with the auth milestone. Rationale in
+[ADR 0006](../architecture/decisions/0006-opaque-sessions-and-refresh-rotation.md)
+and [ADR 0007](../architecture/decisions/0007-permission-based-authorization.md).
+
+| Control                                                            | Where                                                       |
+| ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| Argon2id password hashing                                          | `modules/identity/crypto/password.service.ts`               |
+| Opaque server-side sessions; no signing keys                       | `modules/identity/sessions/session-store.ts`                |
+| Refresh rotation, single-use, family revoked on replay             | `modules/identity/sessions/session.service.ts`              |
+| Rotation claimed by conditional write, not read-then-write         | same — concurrent refresh cannot mint two pairs             |
+| Only token _digests_ stored, in Redis and Postgres alike           | same, and `prisma/schema.prisma`                            |
+| `httpOnly` + `Secure` + `SameSite` session cookies                 | `modules/identity/auth/auth-cookies.ts`                     |
+| Refresh cookie path-scoped to the auth route                       | same                                                        |
+| Authentication + permission guards global, opt-out via `@Public()` | `app.module.ts`                                             |
+| Permission keys enforced, never role names                         | `common/authorization/permissions.guard.ts`                 |
+| Effective permissions cached ≤60 s, invalidated on every change    | `modules/identity/authorization/permission-cache.ts`        |
+| Brute-force lockout, distinct from suspension                      | `prisma/schema.prisma`, `AuthService`                       |
+| Failed login does not reveal whether the account exists            | `modules/identity/auth/auth.service.ts`                     |
+| Auth endpoints rate-limited well below the global default          | `modules/identity/auth/auth.controller.ts`                  |
+| `passwordHash` absent from every response — asserted by test       | `test/auth.e2e-spec.ts`, `test/authorization.e2e-spec.ts`   |
+| Role grants and revocations write an audit row                     | `modules/identity/authorization/role-assignment.service.ts` |
+
+### CSRF
+
+Cookie authentication is defended by cookie attributes and CORS rather than a
+synchroniser token:
+
+- Access cookie is `SameSite=Lax`, and every mutation is a `POST`/`DELETE` with
+  a JSON body — so a cross-site form post does not carry it.
+- Refresh cookie is `SameSite=Strict` **and** path-scoped: off the CSRF surface
+  entirely.
+- CORS is an explicit allow-list with no origin reflection, so a cross-origin
+  script cannot read a response even where it can provoke a request.
+- No `GET` endpoint mutates state — the one case `Lax` would not cover.
+
+**Trigger for adding a synchroniser token:** the first state-changing `GET`, or
+the first cross-site form post. Neither should be introduced casually. Reasoning
+in full in ADR 0006.
+
+### Ownership
+
+Permissions answer "what may this kind of user do", never "does this row belong
+to them". Both checks are required for an owned resource; neither substitutes
+for the other.
+
+`DELETE /me/sessions/:id` verifies ownership with `SessionService.belongsTo`
+before revoking, and returns `404` — not `403` — when the session belongs to
+someone else, because distinguishing the two confirms which ids are real.
+`GET /me/sessions` and `revokeAllForUser` filter by `userId` in the query
+itself.
+
+**Known deviation:** the revoke path is check-then-act across two queries, while
+`.claude/rules/database.md` requires filtering by owner in the query itself. It
+is not exploitable here — a session's `userId` never changes, so the value
+checked cannot go stale — but it is the pattern the rule exists to discourage,
+and it should become an owner-scoped `updateMany` when the auth security audit
+runs.
+
 ## Deferred — implement with the milestone that needs it
 
 | Control                                                      | Milestone |
 | ------------------------------------------------------------ | --------- |
-| Argon2id password hashing                                    | auth      |
-| Refresh-token rotation with reuse detection                  | auth      |
-| RBAC + permission checks, server-side only                   | auth      |
-| CSRF defence for cookie-authenticated mutations              | auth      |
-| IDOR-safe resource ownership checks                          | auth      |
 | File upload validation, signed URLs, out-of-process scanning | learning  |
 | SSRF allow-list for outbound fetches                         | ai        |
 | AI prompt-injection boundaries and cost caps                 | ai        |
