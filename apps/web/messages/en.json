@@ -23,5 +23,105 @@
       "foundation": "Foundation milestone",
       "description": "The platform foundation is in place. Course catalogue, learning player and assessments are being built next."
     }
+  },
+  "auth": {
+    "shared": {
+      "email": "Email address",
+      "password": "Password",
+      "newPassword": "New password",
+      "currentPassword": "Current password",
+      "passwordHint": "At least {min, number} characters.",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "back": "Back",
+      "workingOnIt": "Please wait"
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Start learning IT, English and AI.",
+      "displayName": "Your name",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "checkYourEmail": "If that address can be registered, we have sent a verification link to it. Open the link to finish creating your account."
+    },
+    "verifyEmail": {
+      "title": "Verifying your email",
+      "verifying": "Checking your link.",
+      "verified": "Your email is verified. You can sign in now.",
+      "failed": "This link is invalid or has expired. Request a new one below.",
+      "missingToken": "This link is incomplete. Open the link from your email again, or request a new one.",
+      "resendTitle": "Send a new link",
+      "resend": "Send a new link",
+      "resent": "If that address needs verifying, a new link is on its way.",
+      "signIn": "Go to sign in"
+    },
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Welcome back.",
+      "submit": "Sign in",
+      "forgotPassword": "Forgotten your password?",
+      "noAccount": "No account yet?",
+      "createAccount": "Create one"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email address and we will send you a reset link.",
+      "submit": "Send reset link",
+      "sent": "If that address is registered, we have sent a reset link to it.",
+      "backToSignIn": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "subtitle": "Your other devices will be signed out.",
+      "submit": "Save new password",
+      "done": "Your password is saved. You can sign in with it now.",
+      "missingToken": "This link is incomplete. Open the link from your email again.",
+      "signIn": "Go to sign in"
+    },
+    "account": {
+      "title": "Account security",
+      "signedInAs": "Signed in as {email}",
+      "signOut": "Sign out",
+      "changePassword": "Change password",
+      "passwordChanged": "Your password is changed. Your other devices have been signed out.",
+      "sessionsTitle": "Signed-in devices",
+      "sessionsEmpty": "No other devices are signed in.",
+      "currentSession": "This device",
+      "lastSeen": "Last active {when}",
+      "unknownDevice": "Unknown device",
+      "revoke": "Sign out this device",
+      "revokeOthers": "Sign out all other devices",
+      "revokedOthers": "{count, plural, =0 {No other devices were signed in.} one {One other device was signed out.} other {# other devices were signed out.}}"
+    }
+  },
+  "errors": {
+    "codes": {
+      "INTERNAL_ERROR": "Something went wrong on our side. Please try again.",
+      "VALIDATION_FAILED": "Please check the highlighted fields.",
+      "NOT_FOUND": "We could not find that.",
+      "CONFLICT": "That conflicts with something that already exists.",
+      "RATE_LIMITED": "Too many attempts. Please wait a few minutes and try again.",
+      "PAYLOAD_TOO_LARGE": "That is too large to send.",
+      "SERVICE_UNAVAILABLE": "We could not reach the server. Check your connection and try again.",
+      "UNAUTHENTICATED": "Please sign in to continue.",
+      "INVALID_CREDENTIALS": "That email address or password is not correct.",
+      "SESSION_EXPIRED": "Your session has expired. Please sign in again.",
+      "FORBIDDEN": "You do not have permission to do that.",
+      "ACCOUNT_LOCKED": "Too many failed attempts. Please try again later.",
+      "ACCOUNT_DISABLED": "This account is not available. Please contact support.",
+      "EMAIL_NOT_VERIFIED": "Please verify your email address first. Check your inbox for the link."
+    },
+    "fields": {
+      "required": "This is required.",
+      "invalid_email": "Enter a valid email address.",
+      "too_short": "This is too short.",
+      "too_long": "This is too long.",
+      "leading_or_trailing_whitespace": "Remove the space at the start or end.",
+      "invalid_characters": "This contains characters that are not allowed.",
+      "invalid_token": "This link is not valid.",
+      "must_differ": "Choose a password different from your current one.",
+      "unknown": "This value is not accepted."
+    }
   }
 }

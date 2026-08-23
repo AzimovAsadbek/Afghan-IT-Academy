@@ -22,13 +22,37 @@
  * The residual XSS risk is bounded by React escaping interpolated values and by
  * `dangerouslySetInnerHTML` being absent from the codebase.
  *
- * **Upgrade trigger:** authenticated routes are dynamically rendered by
- * necessity. When they land in the auth milestone, give them a nonce-based
- * policy — at that point `'strict-dynamic'` works, because Next stamps the nonce
- * onto the scripts of a dynamically rendered document.
+ * **Upgrade trigger:** a route that is *dynamically* rendered can carry a
+ * nonce, because Next stamps it onto that document's scripts. The authenticated
+ * routes added in the auth milestone are deliberately still static shells that
+ * fetch on the client, so the trigger has not fired. The first genuinely
+ * dynamic route is the one to revisit this on. See docs/security/baseline.md.
  */
 
-export function buildContentSecurityPolicy(isDevelopment: boolean): string {
+/**
+ * The API origin the browser is allowed to call.
+ *
+ * `connect-src 'self'` alone is wrong the moment the API is on its own origin —
+ * which it is in every environment, including local development, where the web
+ * app runs on :3000 and the API on :4000. The symptom is a blocked `fetch` that
+ * surfaces to the user as "we could not reach the server", with the real reason
+ * visible only in the browser console.
+ *
+ * Only the origin is taken. A path in `connect-src` is ignored by the browser,
+ * and including one invites the belief that the policy is narrower than it is.
+ */
+function apiOriginOf(apiUrl: string | undefined): string | null {
+  if (apiUrl === undefined || apiUrl === '') return null;
+
+  try {
+    return new URL(apiUrl).origin;
+  } catch {
+    // A relative value means the API is same-origin; 'self' already covers it.
+    return null;
+  }
+}
+
+export function buildContentSecurityPolicy(isDevelopment: boolean, apiUrl?: string): string {
   const scriptSrc = [
     "script-src 'self'",
     // Next's prerendered documents contain unhashable inline bootstrap scripts.
@@ -39,6 +63,15 @@ export function buildContentSecurityPolicy(isDevelopment: boolean): string {
     ...(isDevelopment ? ["'unsafe-eval'"] : []),
   ].join(' ');
 
+  const apiOrigin = apiOriginOf(apiUrl);
+
+  const connectSrc = [
+    "connect-src 'self'",
+    ...(apiOrigin === null ? [] : [apiOrigin]),
+    // The dev server's hot-reload socket. Never present in production.
+    ...(isDevelopment ? ['ws:'] : []),
+  ].join(' ');
+
   return [
     "default-src 'self'",
     scriptSrc,
@@ -47,7 +80,7 @@ export function buildContentSecurityPolicy(isDevelopment: boolean): string {
     "img-src 'self' data: blob:",
     // Fonts are self-hosted by next/font; no third-party host is permitted.
     "font-src 'self' data:",
-    "connect-src 'self'",
+    connectSrc,
     "media-src 'self' blob:",
     // Blocks <object>/<embed> plugin-based script execution entirely.
     "object-src 'none'",
@@ -58,6 +91,8 @@ export function buildContentSecurityPolicy(isDevelopment: boolean): string {
     // Clickjacking defence; pairs with X-Frame-Options: DENY.
     "frame-ancestors 'none'",
     "worker-src 'self' blob:",
-    'upgrade-insecure-requests',
+    // Omitted in development: it would rewrite the plain-http dev API origin,
+    // and there is no mixed-content risk on localhost.
+    ...(isDevelopment ? [] : ['upgrade-insecure-requests']),
   ].join('; ');
 }

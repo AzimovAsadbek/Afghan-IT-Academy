@@ -41,16 +41,34 @@ Residual XSS risk is bounded by React escaping interpolated values and by
 `dangerouslySetInnerHTML` being absent from the codebase. Both are review items,
 not guarantees.
 
-**Upgrade trigger — now due.** Authenticated routes are dynamically rendered by
-necessity. Next stamps a nonce onto the scripts of a dynamically rendered
-document, so `'strict-dynamic'` works there even though it cannot work on the
-static locale routes.
+**Upgrade trigger — still not fired, and the reason changed.** The original note
+assumed authenticated routes would be dynamically rendered, which is what makes
+a nonce possible: Next stamps one onto the scripts of a dynamic document.
 
-The auth API has landed; the authentication UI has not. **The first
-authenticated route added to `apps/web` must carry a nonce-based policy**, with
-the existing `'unsafe-inline'` policy left in place for the statically
-pre-rendered marketing routes only. That means the CSP becomes per-route rather
-than global — plan for it when the auth UI is built, not after.
+The authentication UI has now landed and that assumption did not hold. Every
+auth route, `/account` included, is a statically pre-rendered shell whose data
+is fetched client-side with the session cookie — chosen for the low-bandwidth
+budget, and because server-rendering them would mean forwarding the session
+cookie on a second hop for pages a learner visits rarely. All 21 routes are
+still `● SSG`.
+
+So there is no dynamically rendered document to carry a nonce, and the gap
+stands. **The trigger is now the first genuinely dynamic route**, whenever a
+feature actually needs one. Do not convert a route to dynamic rendering purely
+to tighten this policy without weighing it against ADR 0005.
+
+### `connect-src` and the API origin
+
+The policy permits the API origin from `NEXT_PUBLIC_API_URL`, because the API is
+on its own origin in every environment — `:4000` beside the web app's `:3000` in
+development.
+
+`connect-src 'self'` alone blocks every API call. It fails in a way worth
+recording: the browser refuses the request, the fetch client reports the same
+`SERVICE_UNAVAILABLE` it uses for a dropped connection, and the user sees "check
+your connection" while the real cause sits in the console. It was caught in a
+browser, not by a test, and `apps/web/src/lib/api/base-url.ts` now exists so the
+client and the policy cannot disagree about the origin.
 
 ### Input and output
 

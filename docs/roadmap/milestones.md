@@ -37,8 +37,8 @@ pushed.
 
 ## Authentication — definition of done
 
-In progress on `feat/m002-auth` (PR #1, draft). The API is complete and verified;
-the web client is not started.
+In progress on `feat/m002-auth` (PR #1, draft). The API and the web client are
+both complete and verified; the security audit is the remaining gate.
 
 | Item                                                     | Status                                            |
 | -------------------------------------------------------- | ------------------------------------------------- |
@@ -52,13 +52,16 @@ the web client is not started.
 | API tests                                                | ✅ 106 e2e against live Postgres + Redis, 67 unit |
 | ADRs 0006 and 0007                                       | ✅                                                |
 | API and security documentation                           | ✅                                                |
-| **Authentication UI — 6 routes × 3 locales**             | ❌ not started                                    |
-| **Nonce-based CSP for authenticated routes**             | ❌ blocked on the UI; see security/baseline.md    |
+| Authentication UI — 6 routes × 3 locales                 | ✅ verified in a browser, all three locales       |
+| Web tests (validation, CSP, form primitives)             | ✅ 27 web, 13 ui                                  |
+| Nonce-based CSP for authenticated routes                 | ➖ not applicable — see security/baseline.md      |
 | **Security audit pass**                                  | ❌                                                |
 | Tagged `v0.2.0-auth` and merged to `main`                | ❌                                                |
 
 The six web routes: register, verify email, login, forgot password, reset
-password, and account security (profile + session list + password change).
+password, and account security (profile + session list + password change). All
+are statically pre-rendered shells that fetch client-side with the session
+cookie, so the three locales remain `● SSG` and the low-bandwidth budget holds.
 
 ## Deferred, with reasons
 

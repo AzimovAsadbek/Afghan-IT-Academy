@@ -1,4 +1,4 @@
-import { LOCALE_METADATA, getDirection, type Locale } from '@afghan-it-academy/shared';
+import { LOCALE_METADATA, getDirection, type Locale } from '@afghan-it-academy/shared/i18n';
 import type { Metadata } from 'next';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
