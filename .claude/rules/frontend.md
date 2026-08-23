@@ -69,6 +69,34 @@ metered connections and are documented in ADR 0005.
 - Before adding a dependency to the client bundle, check its size and whether a
   50-line local implementation would do.
 
+### Import shared code through its subpath, not the barrel
+
+`@afghan-it-academy/shared` re-exports the Zod validation schemas from its
+`index.ts`. Importing _anything_ from the barrel in client code therefore pulls
+Zod into the bundle — including `import { LOCALES }`, which is why the homepage
+shipped it before the auth milestone.
+
+Use the Zod-free subpaths from `apps/web`:
+
+| Need                              | Import from                               |
+| --------------------------------- | ----------------------------------------- |
+| `LOCALES`, `getDirection`, …      | `@afghan-it-academy/shared/i18n`          |
+| `ERROR_CODES`, `ApiErrorResponse` | `@afghan-it-academy/shared/errors`        |
+| `PASSWORD_MIN_LENGTH`, …          | `@afghan-it-academy/shared/policy`        |
+| `PERMISSIONS`, `PermissionKey`    | `@afghan-it-academy/shared/authorization` |
+
+The API may use the barrel freely — it is a server and Zod is a dependency there
+anyway.
+
+`sideEffects: false` alone does **not** fix this; it was set and Zod still
+shipped. Verify with a build, not by reasoning:
+
+```bash
+grep -rl "ZodError" apps/web/.next/static/chunks/*.js
+```
+
+Removing this cost 324 kB of raw client chunks — a third of the bundle.
+
 ## Accessibility
 
 Semantic HTML first. `jsx-a11y` rules are errors.

@@ -1,4 +1,13 @@
-import { emailSchema, localeSchema, passwordSchema } from '@afghan-it-academy/shared';
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  DISPLAY_NAME_MIN_LENGTH,
+  ONE_TIME_TOKEN_MAX_LENGTH,
+  ONE_TIME_TOKEN_MIN_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  emailSchema,
+  localeSchema,
+  passwordSchema,
+} from '@afghan-it-academy/shared';
 import { z } from 'zod';
 
 /**
@@ -17,8 +26,8 @@ import { z } from 'zod';
 const displayNameSchema = z
   .string()
   .trim()
-  .min(2, 'too_short')
-  .max(80, 'too_long')
+  .min(DISPLAY_NAME_MIN_LENGTH, 'too_short')
+  .max(DISPLAY_NAME_MAX_LENGTH, 'too_long')
   // Control characters would corrupt log lines and email headers. Expressed
   // as the Unicode 'Other, control' property rather than a literal range, so
   // the source contains no control characters of its own.
@@ -27,8 +36,8 @@ const displayNameSchema = z
 /** The opaque one-time token from a verification or reset link. */
 const oneTimeTokenSchema = z
   .string()
-  .min(20, 'invalid_token')
-  .max(128, 'invalid_token')
+  .min(ONE_TIME_TOKEN_MIN_LENGTH, 'invalid_token')
+  .max(ONE_TIME_TOKEN_MAX_LENGTH, 'invalid_token')
   .regex(/^[A-Za-z0-9_-]+$/, 'invalid_token');
 
 export const registerSchema = z
@@ -48,7 +57,7 @@ export const loginSchema = z
     // Not passwordSchema: an existing password may predate a policy change, and
     // rejecting it at the login boundary would lock the owner out of the account
     // they are trying to reach in order to change it.
-    password: z.string().min(1, 'required').max(128, 'too_long'),
+    password: z.string().min(1, 'required').max(PASSWORD_MAX_LENGTH, 'too_long'),
   })
   .strict();
 
@@ -80,7 +89,7 @@ export const changePasswordSchema = z
     // Not passwordSchema: the current password may predate a policy change, and
     // refusing it here would stop the owner reaching the very screen that lets
     // them fix it.
-    currentPassword: z.string().min(1, 'required').max(128, 'too_long'),
+    currentPassword: z.string().min(1, 'required').max(PASSWORD_MAX_LENGTH, 'too_long'),
     newPassword: passwordSchema,
   })
   .strict()

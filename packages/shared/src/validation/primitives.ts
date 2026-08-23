@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { LOCALES } from '../i18n/locales.js';
+import { EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from './policy.js';
 
 /**
  * Validation primitives shared between the API (request DTOs) and the web app
@@ -16,7 +17,12 @@ export const idSchema = z
   .max(32)
   .regex(/^[a-z0-9]+$/, 'invalid_id');
 
-export const emailSchema = z.email('invalid_email').trim().toLowerCase().min(3).max(254);
+export const emailSchema = z
+  .email('invalid_email')
+  .trim()
+  .toLowerCase()
+  .min(3)
+  .max(EMAIL_MAX_LENGTH);
 
 /**
  * Password policy.
@@ -28,8 +34,8 @@ export const emailSchema = z.email('invalid_email').trim().toLowerCase().min(3).
  */
 export const passwordSchema = z
   .string()
-  .min(12, 'too_short')
-  .max(128, 'too_long')
+  .min(PASSWORD_MIN_LENGTH, 'too_short')
+  .max(PASSWORD_MAX_LENGTH, 'too_long')
   .refine((value) => !/^\s|\s$/.test(value), 'leading_or_trailing_whitespace');
 
 /** Cursor pagination: stable under concurrent inserts, unlike offset paging. */

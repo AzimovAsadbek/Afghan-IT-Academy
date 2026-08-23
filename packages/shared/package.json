@@ -1,14 +1,33 @@
 {
+  "//exports": "Subpaths expose the Zod-free modules directly. The barrel re-exports validation/primitives, which imports Zod — so any client-side import through \".\" drags ~14 kB gzipped into the bundle regardless of sideEffects. The web app imports these subpaths; the API uses the barrel freely. Verified by grepping .next/static/chunks for ZodError.",
   "name": "@afghan-it-academy/shared",
   "version": "0.1.0",
   "private": true,
   "license": "UNLICENSED",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "//sideEffects": "Every module here is pure exports. Declaring it lets the web bundler drop Zod when only plain constants (validation/policy.js) are imported — otherwise importing PASSWORD_MIN_LENGTH pulls the whole schema module into a client bundle on a metered connection.",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./policy": {
+      "types": "./dist/validation/policy.d.ts",
+      "default": "./dist/validation/policy.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/error-codes.d.ts",
+      "default": "./dist/errors/error-codes.js"
+    },
+    "./i18n": {
+      "types": "./dist/i18n/locales.d.ts",
+      "default": "./dist/i18n/locales.js"
+    },
+    "./authorization": {
+      "types": "./dist/authorization/permissions.d.ts",
+      "default": "./dist/authorization/permissions.js"
     }
   },
   "files": [
