@@ -167,18 +167,22 @@ Permissions answer "what may this kind of user do", never "does this row belong
 to them". Both checks are required for an owned resource; neither substitutes
 for the other.
 
-`DELETE /me/sessions/:id` verifies ownership with `SessionService.belongsTo`
-before revoking, and returns `404` — not `403` — when the session belongs to
-someone else, because distinguishing the two confirms which ids are real.
-`GET /me/sessions` and `revokeAllForUser` filter by `userId` in the query
-itself.
+`DELETE /me/sessions/:id` revokes through `SessionService.revokeOwned`, whose
+`WHERE` clause carries `userId` alongside the session id, so ownership is a
+condition of the write rather than a separate lookup taken on trust. It returns
+`404` — not `403` — for a session that does not exist, is already revoked, or
+belongs to someone else alike, because distinguishing them confirms which ids
+are real. The Redis key is closed only after the row is confirmed updated:
+closing it first would let a failed IDOR attempt sign out the real owner.
 
-**Known deviation:** the revoke path is check-then-act across two queries, while
-`.claude/rules/database.md` requires filtering by owner in the query itself. It
-is not exploitable here — a session's `userId` never changes, so the value
-checked cannot go stale — but it is the pattern the rule exists to discourage,
-and it should become an owner-scoped `updateMany` when the auth security audit
-runs.
+`GET /me/sessions` and `revokeAllForUser` filter by `userId` in the query
+itself. `SessionService.revoke` remains id-only for callers that already hold
+the session from the request's own credential (logout); its docstring says so.
+
+The earlier check-then-act version was replaced during the M002 security audit.
+It was not exploitable — a session's `userId` is set at creation and no code
+path changes it — but the guarantee now rests on the `WHERE` clause rather than
+on that invariant holding forever.
 
 ## Deferred — implement with the milestone that needs it
 

@@ -241,7 +241,14 @@ export class SessionService {
     };
   }
 
-  /** Ends one session. */
+  /**
+   * Ends one session, by id alone.
+   *
+   * For callers that already hold the session from the request's own
+   * credential — logout — or that are acting on the whole account. When the id
+   * came from a URL, use `revokeOwned` instead: this method proves nothing
+   * about who may end the session.
+   */
   async revoke(sessionId: string, reason: SessionRevocationReason): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.session.updateMany({
@@ -255,6 +262,56 @@ export class SessionService {
     ]);
 
     await this.store.closeSession(sessionId);
+  }
+
+  /**
+   * Ends one session, but only if it belongs to this user.
+   *
+   * Ownership is a condition of the write rather than a separate query taken
+   * on trust, which is what `.claude/rules/database.md` asks for: "filter by
+   * owner in the query itself. Fetching then checking in application code is a
+   * race and an easy thing to forget."
+   *
+   * The race is not currently reachable — a session's `userId` is set at
+   * creation and no code path ever changes it, so a value checked a moment ago
+   * cannot have gone stale. The reason to write it this way anyway is that the
+   * guarantee then rests on the WHERE clause rather than on that invariant
+   * holding forever, and the next person to add a session-transfer feature does
+   * not have to notice this call site.
+   *
+   * @returns false when the session does not exist, is already revoked, or
+   *   belongs to someone else — deliberately one outcome, so the caller cannot
+   *   turn it into a probe for which ids are real.
+   */
+  async revokeOwned(
+    sessionId: string,
+    userId: string,
+    reason: SessionRevocationReason,
+  ): Promise<boolean> {
+    const revoked = await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
+
+      const claimed = await tx.session.updateMany({
+        where: { id: sessionId, userId, revokedAt: null },
+        data: { revokedAt: now, revokedReason: reason },
+      });
+
+      if (claimed.count === 0) return false;
+
+      await tx.refreshToken.updateMany({
+        where: { sessionId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+
+      return true;
+    });
+
+    // Only after the row is committed: closing the Redis key for a session we
+    // did not actually revoke would sign out a session belonging to someone
+    // else, turning a failed IDOR into a denial of service.
+    if (revoked) await this.store.closeSession(sessionId);
+
+    return revoked;
   }
 
   /**
@@ -310,21 +367,6 @@ export class SessionService {
     });
 
     return sessions.map((session) => ({ ...session, isCurrent: session.id === currentSessionId }));
-  }
-
-  /**
-   * Confirms a session belongs to a user before acting on it.
-   *
-   * The session id comes from a URL, so ownership is checked here rather than
-   * trusted — revoking by id without this is a textbook IDOR.
-   */
-  async belongsTo(sessionId: string, userId: string): Promise<boolean> {
-    const session = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-      select: { userId: true },
-    });
-
-    return session?.userId === userId;
   }
 
   /** Issues an access token and registers the session as live. */

@@ -321,12 +321,28 @@ describe('Sessions (e2e)', () => {
         select: { id: true },
       });
 
-      expect(await sessions.belongsTo(issued.sessionId, userId)).toBe(true);
-      expect(await sessions.belongsTo(issued.sessionId, other.id)).toBe(false);
+      // The stranger cannot revoke it, and the attempt leaves it alive.
+      expect(await sessions.revokeOwned(issued.sessionId, other.id, 'USER_LOGOUT')).toBe(false);
+      expect(await sessions.resolveAccessToken(issued.accessToken)).not.toBeNull();
+
+      // The owner can.
+      expect(await sessions.revokeOwned(issued.sessionId, userId, 'USER_LOGOUT')).toBe(true);
+      expect(await sessions.resolveAccessToken(issued.accessToken)).toBeNull();
     });
 
-    it('reports a non-existent session as owned by nobody', async () => {
-      expect(await sessions.belongsTo('does-not-exist', userId)).toBe(false);
+    it('refuses to revoke a session that does not exist', async () => {
+      expect(await sessions.revokeOwned('does-not-exist', userId, 'USER_LOGOUT')).toBe(false);
+    });
+
+    /**
+     * A second revoke must report false rather than succeeding twice, so the
+     * endpoint cannot be used to probe which ids were once real.
+     */
+    it('refuses to revoke a session that is already revoked', async () => {
+      const issued = await sessions.create(userId, context);
+
+      expect(await sessions.revokeOwned(issued.sessionId, userId, 'USER_LOGOUT')).toBe(true);
+      expect(await sessions.revokeOwned(issued.sessionId, userId, 'USER_LOGOUT')).toBe(false);
     });
   });
 });

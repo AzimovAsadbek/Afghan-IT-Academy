@@ -70,9 +70,10 @@ export class SessionController {
   /**
    * Revokes one session.
    *
-   * The id comes from the URL, so ownership is verified before acting. Skipping
-   * that check is the textbook IDOR: any signed-in user could sign out any
-   * other by guessing an id.
+   * The id comes from the URL, so ownership is a condition of the write itself
+   * rather than a separate lookup taken on trust. Skipping it entirely is the
+   * textbook IDOR: any signed-in user could sign out any other by guessing an
+   * id.
    */
   @Delete('sessions/:sessionId')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -81,19 +82,17 @@ export class SessionController {
     @CurrentActor() actor: AuthenticatedActor,
     @Req() request: Request,
   ): Promise<void> {
-    const owned = await this.sessions.belongsTo(sessionId, actor.userId);
+    const revoked = await this.sessions.revokeOwned(sessionId, actor.userId, 'USER_LOGOUT');
 
-    if (!owned) {
-      // Deliberately the same response as a session that does not exist:
-      // distinguishing them confirms which ids are real.
+    if (!revoked) {
+      // One response for "no such session", "already revoked" and "belongs to
+      // someone else". Distinguishing them confirms which ids are real.
       throw new DomainException(
         ERROR_CODES.NOT_FOUND,
         HttpStatus.NOT_FOUND,
         'No such session for this account.',
       );
     }
-
-    await this.sessions.revoke(sessionId, 'USER_LOGOUT');
 
     await this.audit.record(
       {

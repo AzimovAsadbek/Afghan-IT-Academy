@@ -16,8 +16,15 @@
  * resolves every call against the web origin, 404s, and looks like a network
  * fault rather than the misconfiguration it is.
  *
- * Development falls back to the port `pnpm dev` starts the API on, so a fresh
- * clone works without a `.env.local`.
+ * Development falls back to the port `pnpm dev` starts the API on.
+ *
+ * The fallback is not redundant with `.env.example`, which does define
+ * `NEXT_PUBLIC_API_URL`: that template is copied to the **repository root**
+ * `.env`, which the API reads, while Next only loads `.env` files from its own
+ * project directory (`apps/web`). So the variable is correctly configured for
+ * the API and simply invisible to `next dev` unless it is also placed in
+ * `apps/web/.env.local` or exported into the environment. Without this
+ * fallback every local sign-in fails with a misleading connection error.
  */
 function resolveApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL;
