@@ -1,9 +1,9 @@
 // Afghan IT Academy — database schema.
 //
-// Scope of this file at the foundation milestone: identity core and audit log
-// only. The learning, assessment, commerce and gamification domains are
-// specified in docs/database/ and land with the modules that own them —
-// creating their tables now would freeze a design we have not built against.
+// Scope: identity, authorization, sessions and audit. The learning, assessment,
+// commerce and gamification domains are specified in docs/database/ and land
+// with the modules that own them — creating their tables now would freeze a
+// design we have not built against.
 
 // Prisma 7 removed `url` from the datasource block: the connection is supplied
 // by a driver adapter at runtime (src/infrastructure/prisma) and by
@@ -41,22 +41,38 @@ enum Locale {
   ps_AF @map("ps-AF")
 }
 
-/// Coarse-grained role. Fine-grained capabilities are permission-based and live
-/// in the authorization module; this is only the top-level bucket.
-enum UserRole {
-  STUDENT
-  INSTRUCTOR
-  ADMIN
-}
-
+/// Account lifecycle.
+///
+/// Deliberately distinct from email verification and from a transient lockout:
+/// a verified account can be SUSPENDED, and a locked-out account is still
+/// ACTIVE. Conflating the three into booleans is how "why can't this user log
+/// in?" becomes unanswerable.
 enum UserStatus {
   /// Registered but has not proven control of the email address.
   PENDING_VERIFICATION
   ACTIVE
-  /// Temporarily blocked, e.g. repeated failed logins.
+  /// Blocked by an administrator. Requires an administrative action to lift.
   SUSPENDED
-  /// Deactivated by the user or an admin. Retained for referential integrity.
-  DISABLED
+  /// Closed by the user or an administrator. Retained for referential integrity.
+  DEACTIVATED
+}
+
+enum OneTimeTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+/// Why a session stopped being valid. Recorded so support can answer "I was
+/// logged out unexpectedly" without guessing.
+enum SessionRevocationReason {
+  USER_LOGOUT
+  USER_LOGOUT_ALL
+  PASSWORD_CHANGED
+  PASSWORD_RESET
+  /// A refresh token was replayed — the whole family is revoked. See ADR 0006.
+  REFRESH_REUSE_DETECTED
+  ADMIN_REVOKED
+  ACCOUNT_SUSPENDED
 }
 
 // ---------------------------------------------------------------------------
@@ -66,31 +82,233 @@ enum UserStatus {
 model User {
   id String @id @default(cuid())
 
-  /// Stored lower-cased and trimmed by the application layer; the unique index
-  /// is therefore a genuine "one account per address" guarantee.
-  email         String  @unique
-  emailVerified Boolean @default(false)
+  /// The address exactly as the user typed it. Used for display and for the
+  /// To: header, because some mail systems are case-sensitive in the local part.
+  email String
 
-  /// Argon2id digest. Null for accounts that only use a federated provider.
-  /// Never selected into any DTO — see docs/security/.
+  /// Lower-cased and trimmed. This is what carries the unique index, so
+  /// "A@x.com" and "a@x.com" cannot both register.
+  emailNormalized String @unique
+
+  /// Null until the address is proven. Stores *when* rather than a boolean, so
+  /// support and audit can answer "since when?".
+  emailVerifiedAt DateTime?
+
+  /// Argon2id digest. Null for accounts that only use a federated provider once
+  /// OAuth lands. Never selected into any DTO — see docs/security/.
   passwordHash String?
 
   displayName String
-  role        UserRole   @default(STUDENT)
   status      UserStatus @default(PENDING_VERIFICATION)
 
   /// UI language. Also used for transactional email and certificate rendering.
   preferredLocale Locale @default(fa_AF)
 
+  /// Consecutive failed logins; reset to zero on success.
+  failedLoginCount Int @default(0)
+
+  /// Transient brute-force lockout. Deliberately NOT a status: a temporary lock
+  /// is an automated, self-healing condition, while SUSPENDED is a deliberate
+  /// administrative decision. Overloading one onto the other loses that.
+  lockedUntil DateTime?
+
   lastLoginAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  roles     UserRole[]
+  sessions  Session[]
+  tokens    OneTimeToken[]
   auditLogs AuditLog[]
 
-  /// Supports the catalogue/admin listings that filter by role and status.
-  @@index([status, role])
+  /// Supports admin listings filtered by account state.
+  @@index([status])
   @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Authorization — see ADR 0007
+// ---------------------------------------------------------------------------
+
+/// A named bundle of permissions. Roles are a grouping convenience for
+/// administrators; permissions are the unit actually enforced in code.
+model Role {
+  id String @id @default(cuid())
+
+  /// Stable machine key, e.g. `INSTRUCTOR`. Referenced by the seed and by
+  /// administrative tooling, so it is contract.
+  key         String  @unique
+  description String
+
+  /// Seeded roles the application depends on. Guards against an administrator
+  /// deleting STUDENT and breaking registration.
+  isSystem Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+/// A single capability, named `resource:action`.
+///
+/// Authorization is always checked against one of these, never against a role
+/// name — `if (user.role === 'ADMIN')` is exactly the pattern this table exists
+/// to prevent.
+model Permission {
+  id String @id @default(cuid())
+
+  /// e.g. `course:publish`. Permanent contract once granted.
+  key         String @unique
+  description String
+
+  createdAt DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  grantedAt DateTime @default(now())
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+/// Role assignment. A user may hold several roles; their effective permissions
+/// are the union.
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  /// Who granted it. Null for the role assigned automatically at registration.
+  /// Not a foreign key: the grant record must outlive the granting account.
+  assignedById String?
+  assignedAt   DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// ---------------------------------------------------------------------------
+// Sessions and tokens — see ADR 0006
+// ---------------------------------------------------------------------------
+
+/// One authenticated device. Survives access-token expiry; ends at logout,
+/// revocation or absolute expiry.
+///
+/// Persisted in Postgres rather than only in Redis so the user can list and
+/// revoke their devices, and so a Redis flush does not erase the security
+/// record of what was signed in.
+model Session {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  /// Absolute lifetime. A session cannot be refreshed past this.
+  expiresAt DateTime
+
+  revokedAt     DateTime?
+  revokedReason SessionRevocationReason?
+
+  /// Truncated to a /24 (IPv4) or /48 (IPv6) prefix — enough to show the user
+  /// "a sign-in from a different network", not enough to track them.
+  ipPrefix  String?
+  userAgent String?
+
+  refreshTokens RefreshToken[]
+
+  /// The session-list query: a user's live sessions, newest first.
+  @@index([userId, revokedAt, lastSeenAt])
+  /// Supports the expired-session sweep.
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// A rotating refresh token.
+///
+/// Only the SHA-256 hash is stored: a database disclosure must not hand the
+/// attacker usable tokens. Rotation appends a new row and stamps `usedAt` on
+/// the old one; presenting an already-used token is a replay and revokes the
+/// entire `familyId`.
+model RefreshToken {
+  id String @id @default(cuid())
+
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  /// Every token descended from one login shares this. Reuse detection revokes
+  /// the family, not just the replayed token, because a replay means either the
+  /// legitimate client or the attacker holds a copy and we cannot tell which.
+  familyId String
+
+  /// SHA-256 of the raw token. Unique so a lookup is a single indexed read and
+  /// a collision is impossible to store.
+  tokenHash String @unique
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  /// Set when this token is exchanged. A second exchange is a replay.
+  usedAt DateTime?
+
+  revokedAt DateTime?
+
+  @@index([sessionId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+/// Single-use token for email verification and password reset.
+///
+/// One table with a purpose discriminator rather than two near-identical ones:
+/// the lifecycle, storage rule and cleanup sweep are the same, and duplicating
+/// them is how one of the two quietly loses a security property.
+model OneTimeToken {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  purpose OneTimeTokenPurpose
+
+  /// SHA-256 of the raw token. The raw value exists only in the email.
+  tokenHash String @unique
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  /// Set on redemption. A second redemption is rejected.
+  consumedAt DateTime?
+
+  /// Truncated prefix of the requesting address, for abuse investigation.
+  requestIpPrefix String?
+
+  /// Finds a user's live tokens of a purpose, for resend throttling and for
+  /// invalidating outstanding tokens when a new one is issued.
+  @@index([userId, purpose, consumedAt])
+  @@index([expiresAt])
+  @@map("one_time_tokens")
 }
 
 // ---------------------------------------------------------------------------

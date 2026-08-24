@@ -41,10 +41,34 @@ Residual XSS risk is bounded by React escaping interpolated values and by
 `dangerouslySetInnerHTML` being absent from the codebase. Both are review items,
 not guarantees.
 
-**Upgrade trigger:** authenticated routes are dynamically rendered by necessity.
-When they land in the auth milestone, give them a nonce-based policy — Next
-stamps the nonce onto the scripts of a dynamically rendered document, so
-`'strict-dynamic'` works there.
+**Upgrade trigger — still not fired, and the reason changed.** The original note
+assumed authenticated routes would be dynamically rendered, which is what makes
+a nonce possible: Next stamps one onto the scripts of a dynamic document.
+
+The authentication UI has now landed and that assumption did not hold. Every
+auth route, `/account` included, is a statically pre-rendered shell whose data
+is fetched client-side with the session cookie — chosen for the low-bandwidth
+budget, and because server-rendering them would mean forwarding the session
+cookie on a second hop for pages a learner visits rarely. All 21 routes are
+still `● SSG`.
+
+So there is no dynamically rendered document to carry a nonce, and the gap
+stands. **The trigger is now the first genuinely dynamic route**, whenever a
+feature actually needs one. Do not convert a route to dynamic rendering purely
+to tighten this policy without weighing it against ADR 0005.
+
+### `connect-src` and the API origin
+
+The policy permits the API origin from `NEXT_PUBLIC_API_URL`, because the API is
+on its own origin in every environment — `:4000` beside the web app's `:3000` in
+development.
+
+`connect-src 'self'` alone blocks every API call. It fails in a way worth
+recording: the browser refuses the request, the fetch client reports the same
+`SERVICE_UNAVAILABLE` it uses for a dropped connection, and the user sees "check
+your connection" while the real cause sits in the console. It was caught in a
+browser, not by a test, and `apps/web/src/lib/api/base-url.ts` now exists so the
+client and the policy cannot disagree about the origin.
 
 ### Input and output
 
@@ -96,15 +120,74 @@ and forgery of adjacent records. Verified by e2e test.
 Audit-log IP addresses are truncated to a /24 (IPv4) or /48 (IPv6) prefix before
 storage: enough to investigate abuse, not enough to track an individual learner.
 
+### Authentication and authorization
+
+Landed with the auth milestone. Rationale in
+[ADR 0006](../architecture/decisions/0006-opaque-sessions-and-refresh-rotation.md)
+and [ADR 0007](../architecture/decisions/0007-permission-based-authorization.md).
+
+| Control                                                            | Where                                                       |
+| ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| Argon2id password hashing                                          | `modules/identity/crypto/password.service.ts`               |
+| Opaque server-side sessions; no signing keys                       | `modules/identity/sessions/session-store.ts`                |
+| Refresh rotation, single-use, family revoked on replay             | `modules/identity/sessions/session.service.ts`              |
+| Rotation claimed by conditional write, not read-then-write         | same — concurrent refresh cannot mint two pairs             |
+| Only token _digests_ stored, in Redis and Postgres alike           | same, and `prisma/schema.prisma`                            |
+| `httpOnly` + `Secure` + `SameSite` session cookies                 | `modules/identity/auth/auth-cookies.ts`                     |
+| Refresh cookie path-scoped to the auth route                       | same                                                        |
+| Authentication + permission guards global, opt-out via `@Public()` | `app.module.ts`                                             |
+| Permission keys enforced, never role names                         | `common/authorization/permissions.guard.ts`                 |
+| Effective permissions cached ≤60 s, invalidated on every change    | `modules/identity/authorization/permission-cache.ts`        |
+| Brute-force lockout, distinct from suspension                      | `prisma/schema.prisma`, `AuthService`                       |
+| Failed login does not reveal whether the account exists            | `modules/identity/auth/auth.service.ts`                     |
+| Auth endpoints rate-limited well below the global default          | `modules/identity/auth/auth.controller.ts`                  |
+| `passwordHash` absent from every response — asserted by test       | `test/auth.e2e-spec.ts`, `test/authorization.e2e-spec.ts`   |
+| Role grants and revocations write an audit row                     | `modules/identity/authorization/role-assignment.service.ts` |
+
+### CSRF
+
+Cookie authentication is defended by cookie attributes and CORS rather than a
+synchroniser token:
+
+- Access cookie is `SameSite=Lax`, and every mutation is a `POST`/`DELETE` with
+  a JSON body — so a cross-site form post does not carry it.
+- Refresh cookie is `SameSite=Strict` **and** path-scoped: off the CSRF surface
+  entirely.
+- CORS is an explicit allow-list with no origin reflection, so a cross-origin
+  script cannot read a response even where it can provoke a request.
+- No `GET` endpoint mutates state — the one case `Lax` would not cover.
+
+**Trigger for adding a synchroniser token:** the first state-changing `GET`, or
+the first cross-site form post. Neither should be introduced casually. Reasoning
+in full in ADR 0006.
+
+### Ownership
+
+Permissions answer "what may this kind of user do", never "does this row belong
+to them". Both checks are required for an owned resource; neither substitutes
+for the other.
+
+`DELETE /me/sessions/:id` revokes through `SessionService.revokeOwned`, whose
+`WHERE` clause carries `userId` alongside the session id, so ownership is a
+condition of the write rather than a separate lookup taken on trust. It returns
+`404` — not `403` — for a session that does not exist, is already revoked, or
+belongs to someone else alike, because distinguishing them confirms which ids
+are real. The Redis key is closed only after the row is confirmed updated:
+closing it first would let a failed IDOR attempt sign out the real owner.
+
+`GET /me/sessions` and `revokeAllForUser` filter by `userId` in the query
+itself. `SessionService.revoke` remains id-only for callers that already hold
+the session from the request's own credential (logout); its docstring says so.
+
+The earlier check-then-act version was replaced during the M002 security audit.
+It was not exploitable — a session's `userId` is set at creation and no code
+path changes it — but the guarantee now rests on the `WHERE` clause rather than
+on that invariant holding forever.
+
 ## Deferred — implement with the milestone that needs it
 
 | Control                                                      | Milestone |
 | ------------------------------------------------------------ | --------- |
-| Argon2id password hashing                                    | auth      |
-| Refresh-token rotation with reuse detection                  | auth      |
-| RBAC + permission checks, server-side only                   | auth      |
-| CSRF defence for cookie-authenticated mutations              | auth      |
-| IDOR-safe resource ownership checks                          | auth      |
 | File upload validation, signed URLs, out-of-process scanning | learning  |
 | SSRF allow-list for outbound fetches                         | ai        |
 | AI prompt-injection boundaries and cost caps                 | ai        |

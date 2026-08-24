@@ -49,6 +49,48 @@ export const envSchema = z
     /** Trust N reverse-proxy hops for client IP resolution. 0 = trust none. */
     TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
 
+    /* --- Authentication ---------------------------------------------------
+     * Argon2id parameters. The minimums are the OWASP baseline and the schema
+     * refuses to go below them: a misconfigured deploy must fail at startup
+     * rather than quietly hash every password with weak settings.
+     */
+    AUTH_ARGON2_MEMORY_KIB: z.coerce.number().int().min(19_456).max(1_048_576).default(19_456),
+    AUTH_ARGON2_TIME_COST: z.coerce.number().int().min(2).max(10).default(2),
+    AUTH_ARGON2_PARALLELISM: z.coerce.number().int().min(1).max(4).default(1),
+
+    /** Access token lifetime. Short, because revocation between refreshes
+     *  relies on the session store being consulted at each request. */
+    AUTH_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(900),
+    /** Refresh token lifetime. Rotated on every use. */
+    AUTH_REFRESH_TOKEN_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(3_600)
+      .default(30 * 24 * 60 * 60),
+    /** Hard ceiling on a session regardless of refresh activity. */
+    AUTH_SESSION_ABSOLUTE_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(3_600)
+      .default(90 * 24 * 60 * 60),
+
+    AUTH_EMAIL_VERIFICATION_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(300)
+      .default(24 * 60 * 60),
+    /** Deliberately shorter than verification: a reset link is a live
+     *  credential for whoever holds the mailbox. */
+    AUTH_PASSWORD_RESET_TTL_SECONDS: z.coerce.number().int().min(300).max(86_400).default(3_600),
+
+    /** Cookie Domain attribute. Leave unset to scope cookies to the API host. */
+    AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
+
+    /** Origin the web app is served from. Used to build verification and reset
+     *  links, so it must never be attacker-controlled — hence config, not a
+     *  request header. */
+    WEB_APP_URL: z.url({ protocol: /^https?$/ }),
+
     /* --- Body limits ------------------------------------------------------
      * Kept small by default. Media uploads go to object storage via signed
      * URLs, never through the API process.
@@ -61,6 +103,25 @@ export const envSchema = z
       .default(1_024 * 1_024),
   })
   .superRefine((env, ctx) => {
+    /* Token lifetimes must nest. A refresh token that outlives its session, or
+     * an access token that outlives the refresh token, produces credentials
+     * that appear valid but can never be exchanged. */
+    if (env.AUTH_ACCESS_TOKEN_TTL_SECONDS >= env.AUTH_REFRESH_TOKEN_TTL_SECONDS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_ACCESS_TOKEN_TTL_SECONDS'],
+        message: 'The access token must expire before the refresh token.',
+      });
+    }
+
+    if (env.AUTH_REFRESH_TOKEN_TTL_SECONDS > env.AUTH_SESSION_ABSOLUTE_TTL_SECONDS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_REFRESH_TOKEN_TTL_SECONDS'],
+        message: 'The refresh token must not outlive the session absolute lifetime.',
+      });
+    }
+
     if (env.NODE_ENV !== 'production') return;
 
     if (env.CORS_ORIGINS.some((origin) => origin.startsWith('http://'))) {
@@ -68,6 +129,14 @@ export const envSchema = z
         code: 'custom',
         path: ['CORS_ORIGINS'],
         message: 'Plain-HTTP origins are not allowed in production.',
+      });
+    }
+
+    if (env.WEB_APP_URL.startsWith('http://')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_APP_URL'],
+        message: 'Verification and reset links must be https in production.',
       });
     }
 

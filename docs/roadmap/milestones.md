@@ -7,7 +7,7 @@ pushed.
 | Tag                 | Milestone              | Contents                                                                       |
 | ------------------- | ---------------------- | ------------------------------------------------------------------------------ |
 | `v0.1.0-foundation` | **Foundation** ✅      | Monorepo, web + API skeletons, database, i18n/RTL, security baseline, CI, docs |
-| `v0.2.0-auth`       | Authentication         | Registration, login, Argon2id, refresh-token rotation, RBAC, audit logging     |
+| `v0.2.0-auth`       | **Authentication** 🚧  | Registration, login, Argon2id, refresh-token rotation, RBAC, audit logging     |
 | `v0.3.0-lms`        | Catalogue and learning | Courses, paths, modules, lessons, enrollment, progress, low-bandwidth player   |
 | `v0.4.0-assessment` | Assessment             | Quizzes, exams, assignments, projects, coding tasks, certification             |
 | `v0.5.0-ai`         | AI Mentor              | Tutoring, feedback, safety boundaries, cost controls                           |
@@ -34,6 +34,34 @@ pushed.
 | CI foundation                                      | ✅                                                                 |
 | Git identity verified                              | ✅                                                                 |
 | Committed and pushed                               | ✅                                                                 |
+
+## Authentication — definition of done
+
+In progress on `feat/m002-auth` (PR #1, draft). The API and the web client are
+both complete and verified; the security audit is the remaining gate.
+
+| Item                                                     | Status                                            |
+| -------------------------------------------------------- | ------------------------------------------------- |
+| Identity, role, permission, session, token, audit schema | ✅ two migrations, convergent seed                |
+| Argon2id hashing, opaque token primitives                | ✅                                                |
+| Registration, email verification, login, logout          | ✅                                                |
+| Sessions, refresh rotation, family reuse detection       | ✅ ADR 0006                                       |
+| RBAC guards, permission enforcement, role administration | ✅ ADR 0007                                       |
+| Password change, forgot, reset                           | ✅                                                |
+| Audit logging, rate limiting, brute-force lockout        | ✅                                                |
+| API tests                                                | ✅ 106 e2e against live Postgres + Redis, 67 unit |
+| ADRs 0006 and 0007                                       | ✅                                                |
+| API and security documentation                           | ✅                                                |
+| Authentication UI — 6 routes × 3 locales                 | ✅ verified in a browser, all three locales       |
+| Web tests (validation, CSP, form primitives)             | ✅ 27 web, 13 ui                                  |
+| Nonce-based CSP for authenticated routes                 | ➖ not applicable — see security/baseline.md      |
+| **Security audit pass**                                  | ❌                                                |
+| Tagged `v0.2.0-auth` and merged to `main`                | ❌                                                |
+
+The six web routes: register, verify email, login, forgot password, reset
+password, and account security (profile + session list + password change). All
+are statically pre-rendered shells that fetch client-side with the session
+cookie, so the three locales remain `● SSG` and the low-bandwidth budget holds.
 
 ## Deferred, with reasons
 

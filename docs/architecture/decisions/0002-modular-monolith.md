@@ -27,8 +27,8 @@ src/
   bootstrap/        application composition
 ```
 
-Dependency rules, enforced by `no-restricted-imports` in
-`packages/eslint-config/nest.js` rather than by review:
+Dependency rules, enforced by the `boundaries/module-boundaries` rule in
+`packages/eslint-config/module-boundaries.js` rather than by review:
 
 1. A domain module may import `common`, `config` and `infrastructure`.
 2. A domain module may import another module **only through its public
@@ -42,6 +42,21 @@ Dependency rules, enforced by `no-restricted-imports` in
 - If a domain later needs independent scaling, its module already has an
   enforced public interface, which is most of the extraction work.
 - The discipline is mechanical, not cultural: violating a boundary fails CI.
+
+### Enforcement was rewritten in M002
+
+The original implementation used `no-restricted-imports` patterns. That rule
+matches the import _specifier string_, not the file it resolves to, so the most
+likely violation — a sibling import written `../identity/crypto/x.js` — contained
+no `modules/` segment and matched nothing. A probe confirmed it linted clean, and
+it had been inert since M001 because only one module existed.
+
+No string pattern can fix this: a legitimate intra-module import and a
+cross-module violation are the same shape. The replacement is a local rule that
+resolves both paths and compares which module each file belongs to. It has its
+own test suite (`module-boundaries.test.js`), because a rule that silently stops
+firing is worse than no rule — it produces documented confidence in a guarantee
+that does not exist.
 
 ## When to revisit
 

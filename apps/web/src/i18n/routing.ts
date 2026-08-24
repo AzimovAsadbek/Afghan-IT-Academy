@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, LOCALES } from '@afghan-it-academy/shared';
+import { DEFAULT_LOCALE, LOCALES } from '@afghan-it-academy/shared/i18n';
 import { defineRouting } from 'next-intl/routing';
 
 /**

@@ -3,6 +3,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import { baseConfig } from '@afghan-it-academy/eslint-config/base';
 import { nestConfig } from '@afghan-it-academy/eslint-config/nest';
 import { nextConfig } from '@afghan-it-academy/eslint-config/next';
+import { plainConfig } from '@afghan-it-academy/eslint-config/plain';
 
 /**
  * Root ESLint configuration.
@@ -41,5 +42,11 @@ export default defineConfig([
   {
     files: ['packages/*/src/**/*.{ts,tsx}'],
     extends: [baseConfig],
+  },
+  {
+    /* The ESLint configs and custom rules themselves. Linting these is how a
+     * broken rule gets caught rather than quietly never firing again. */
+    files: ['packages/*/*.js', 'packages/*/*.mjs', '*.mjs'],
+    extends: [plainConfig],
   },
 ]);

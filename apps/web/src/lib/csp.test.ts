@@ -33,12 +33,46 @@ describe('buildContentSecurityPolicy', () => {
     expect(fontSrc).toBe("font-src 'self' data:");
   });
 
-  it('restricts network calls to the same origin', () => {
+  it('restricts network calls to the same origin when no API origin is configured', () => {
     expect(directive(production, 'connect-src')).toBe("connect-src 'self'");
   });
 
-  it('upgrades insecure requests', () => {
+  /**
+   * The API is on its own origin in every environment. Without it in
+   * connect-src the browser blocks every call, and the user sees "we could not
+   * reach the server" while the real reason sits in the console.
+   */
+  it('permits the configured API origin', () => {
+    const policy = buildContentSecurityPolicy(false, 'https://api.example.com/api');
+    expect(directive(policy, 'connect-src')).toBe("connect-src 'self' https://api.example.com");
+  });
+
+  it('reduces the API URL to an origin, since a path in connect-src is ignored', () => {
+    const policy = buildContentSecurityPolicy(false, 'https://api.example.com/api/v1');
+    expect(directive(policy, 'connect-src')).toBe("connect-src 'self' https://api.example.com");
+  });
+
+  it('ignores a same-origin (relative) API URL, which self already covers', () => {
+    const policy = buildContentSecurityPolicy(false, '/api');
+    expect(directive(policy, 'connect-src')).toBe("connect-src 'self'");
+  });
+
+  it('does not permit a websocket origin in production', () => {
+    const policy = buildContentSecurityPolicy(false, 'https://api.example.com');
+    expect(directive(policy, 'connect-src')).not.toContain('ws:');
+  });
+
+  it('upgrades insecure requests in production', () => {
     expect(production).toContain('upgrade-insecure-requests');
+  });
+
+  /**
+   * In development the API is plain http on localhost. Upgrading it would
+   * rewrite the request to https and fail the TLS handshake, and there is no
+   * mixed-content risk on a loopback address.
+   */
+  it('does not upgrade insecure requests in development', () => {
+    expect(development).not.toContain('upgrade-insecure-requests');
   });
 
   /**

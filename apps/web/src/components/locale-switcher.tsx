@@ -1,6 +1,6 @@
 'use client';
 
-import { LOCALES, LOCALE_METADATA, type Locale } from '@afghan-it-academy/shared';
+import { LOCALES, LOCALE_METADATA, type Locale } from '@afghan-it-academy/shared/i18n';
 import { useLocale, useTranslations } from 'next-intl';
 import { useTransition } from 'react';
 

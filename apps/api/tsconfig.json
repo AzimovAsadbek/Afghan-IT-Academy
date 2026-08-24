@@ -5,6 +5,6 @@
     "outDir": "./dist",
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
-  "include": ["src/**/*", "test/**/*", "*.config.ts", "*.config.mts"],
+  "include": ["src/**/*", "test/**/*", "prisma/**/*.mts", "*.config.ts", "*.config.mts"],
   "exclude": ["node_modules", "dist", "generated"]
 }

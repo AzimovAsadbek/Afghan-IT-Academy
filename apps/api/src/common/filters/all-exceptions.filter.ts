@@ -15,6 +15,7 @@ import {
 import type { Response } from 'express';
 import { Logger } from 'nestjs-pino';
 
+import { DomainException } from '../exceptions/domain.exception.js';
 import { FieldValidationException } from '../exceptions/field-validation.exception.js';
 import type { RequestWithId } from '../http/request-with-id.js';
 
@@ -97,6 +98,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
         code: ERROR_CODES.VALIDATION_FAILED,
         message: 'Request validation failed.',
         fields: exception.fields,
+      };
+    }
+
+    // Checked before HttpException, which it extends: a domain exception knows
+    // its own code, and the status-derived fallback below would discard it.
+    if (exception instanceof DomainException) {
+      return {
+        status: exception.getStatus(),
+        code: exception.code,
+        message: exception.message,
       };
     }
 

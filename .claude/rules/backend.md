@@ -17,13 +17,32 @@ globs: apps/api/**
 A new domain gets `modules/<domain>/` with a module, controller, service and
 `index.ts` barrel. Business logic lives in the service, never the controller.
 
+**A barrel is a module's public face — for consumers outside it.** Within a
+module, import the concrete file (`../sessions/session.service.js`), never the
+sibling barrel (`../sessions/index.js`).
+
+A barrel re-exports everything in its folder, so importing one symbol through it
+drags in the rest. The moment a controller in that folder imports back, there is
+a cycle, and a class ends up `undefined` at decoration time. Nest reports that as
+`can't resolve dependencies of X (..., ?, ...)` naming a provider that is present
+and correctly registered — several layers away from the actual cause. It cost
+real time once; the fix is mechanical, so do it by default.
+
+The module-boundary lint rule enforces the other half of this — that outsiders
+use the barrel. It deliberately permits intra-module imports, which is why this
+one is a convention rather than a rule.
+
 ## Configuration
 
 Inject the `ENV` token and read a typed property. Never call `process.env`
 outside `src/config` — the lint rule blocks it.
 
-Adding a variable means: add it to `envSchema`, add it to `.env.example`, and
-add a test case. Secrets get no default value.
+Adding a variable means four edits, not three: `envSchema`, `.env.example`, a
+test case, **and the e2e job's `env:` block in `.github/workflows/ci.yml`**.
+
+Miss the last one and everything passes locally — where `.env` already has the
+value — while CI fails at application boot with a config error, because the
+schema is doing exactly what it should. It has happened once.
 
 ## Validation
 

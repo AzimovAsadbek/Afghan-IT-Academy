@@ -2,11 +2,18 @@ import createMiddleware from 'next-intl/middleware';
 import type { NextRequest } from 'next/server';
 
 import { routing } from './i18n/routing';
+import { API_BASE_URL } from './lib/api/base-url';
 import { buildContentSecurityPolicy } from './lib/csp';
 
 const intlProxy = createMiddleware(routing);
 
-const CONTENT_SECURITY_POLICY = buildContentSecurityPolicy(process.env.NODE_ENV === 'development');
+// API_BASE_URL rather than the raw environment variable: the fetch client
+// resolves a development fallback, and a connect-src that does not match what
+// the client actually calls blocks every request.
+const CONTENT_SECURITY_POLICY = buildContentSecurityPolicy(
+  process.env.NODE_ENV === 'development',
+  API_BASE_URL,
+);
 
 /**
  * Runs before every document request: applies locale routing and the security

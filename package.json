@@ -27,7 +27,9 @@
     "db:migrate": "pnpm --filter @afghan-it-academy/api exec prisma migrate dev",
     "db:generate": "pnpm --filter @afghan-it-academy/api exec prisma generate",
     "db:studio": "pnpm --filter @afghan-it-academy/api exec prisma studio",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:seed": "pnpm --filter @afghan-it-academy/api run db:seed",
+    "db:reset": "pnpm --filter @afghan-it-academy/api exec prisma migrate reset --force && pnpm run db:seed"
   },
   "devDependencies": {
     "@afghan-it-academy/eslint-config": "workspace:*",

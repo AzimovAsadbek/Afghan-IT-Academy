@@ -8,8 +8,10 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 /**
  * Headers that are safe to serve statically on every response.
  *
- * The Content-Security-Policy is deliberately NOT here: it carries a
- * per-request nonce and is set in middleware.ts instead.
+ * The Content-Security-Policy is deliberately NOT here: it is built in
+ * `src/lib/csp.ts` and applied in `src/proxy.ts`, which is also where a
+ * per-route policy would live. See the CSP section of docs/security/baseline.md
+ * for why the current policy permits inline scripts.
  */
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },

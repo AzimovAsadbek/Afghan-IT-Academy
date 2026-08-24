@@ -4,11 +4,14 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
-import { buildLoggerConfig } from './common/index.js';
+import { AuthenticationGuard, PermissionsGuard, buildLoggerConfig } from './common/index.js';
 import { AppConfigModule, ENV, type Env } from './config/index.js';
 import { PrismaModule } from './infrastructure/prisma/index.js';
 import { RedisModule, RedisService } from './infrastructure/redis/index.js';
+import { AuditModule } from './modules/audit/index.js';
 import { HealthModule } from './modules/health/index.js';
+import { IdentityModule } from './modules/identity/index.js';
+import { NotificationsModule } from './modules/notifications/index.js';
 
 /**
  * Application composition root.
@@ -50,12 +53,23 @@ import { HealthModule } from './modules/health/index.js';
       }),
     }),
 
+    AuditModule,
+    NotificationsModule,
+
     HealthModule,
+    IdentityModule,
   ],
   providers: [
-    /* Applied globally: rate limiting must be opt-out per route, never opt-in.
-     * An endpoint added next year is protected by default. */
+    /* Order matters: throttle before authenticating, so a flood of anonymous
+     * requests is rejected without a session lookup each. */
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+
+    /* Applied globally, so every route is authenticated and permission-checked
+     * unless it opts out with @Public(). An endpoint added next year is
+     * protected by default; the inverse fails silently the first time someone
+     * forgets, and the omission is invisible in review. */
+    { provide: APP_GUARD, useClass: AuthenticationGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
 export class AppModule {}

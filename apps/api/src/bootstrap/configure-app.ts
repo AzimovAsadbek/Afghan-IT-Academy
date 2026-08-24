@@ -1,6 +1,7 @@
 import { VersioningType } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
@@ -58,6 +59,12 @@ export function configureApp(app: NestExpressApplication, env: Env): void {
 
   // Reduces JSON payload size substantially on slow Afghan connections.
   app.use(compression());
+
+  /* Session credentials travel in httpOnly cookies, so they must be parsed
+   * before any handler or guard tries to read one. Unsigned deliberately: the
+   * values are opaque 256-bit tokens validated against the session store, so a
+   * cookie signature would authenticate a value we already verify by lookup. */
+  app.use(cookieParser());
 
   /* --- CORS ---------------------------------------------------------------
    * An explicit allow-list, never a reflected origin. Credentials are enabled
