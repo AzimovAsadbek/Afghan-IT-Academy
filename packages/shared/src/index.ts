@@ -49,3 +49,18 @@ export {
   type PermissionKey,
   type RoleKey,
 } from './authorization/permissions.js';
+
+export {
+  ALL_COURSE_LEVELS,
+  ALL_SUBJECTS,
+  COURSE_LEVELS,
+  COURSE_STATUSES,
+  SUBJECTS,
+  isCourseLevel,
+  isSubjectKey,
+  type CourseDetail,
+  type CourseLevel,
+  type CourseStatus,
+  type CourseSummary,
+  type SubjectKey,
+} from './catalogue/catalogue.js';

@@ -28,6 +28,10 @@
     "./authorization": {
       "types": "./dist/authorization/permissions.d.ts",
       "default": "./dist/authorization/permissions.js"
+    },
+    "./catalogue": {
+      "types": "./dist/catalogue/catalogue.d.ts",
+      "default": "./dist/catalogue/catalogue.js"
     }
   },
   "files": [

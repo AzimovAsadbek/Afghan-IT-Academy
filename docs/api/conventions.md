@@ -127,6 +127,32 @@ Tighter than the global default, per client address, on top of it:
 Per-_account_ limits, which per-address limits cannot provide, are enforced in
 `AuthService` alongside the brute-force lockout.
 
+## Catalogue
+
+Public read endpoints. Design rationale for the multilingual storage is in
+[ADR 0008](../architecture/decisions/0008-multilingual-content-storage.md).
+
+| Method | Path                    | Auth   | Notes                                     |
+| ------ | ----------------------- | ------ | ----------------------------------------- |
+| `GET`  | `/api/v1/courses`       | public | cursor paginated; `subject`, `level`      |
+| `GET`  | `/api/v1/courses/:slug` | public | `404` for a draft, same as a missing slug |
+
+Both are `@Public()` — discovery is the front door, and a learner must be able
+to see what is on offer before creating an account. The global guard still runs
+and still attaches an actor when a session is present, which is what lets the
+same endpoints show unpublished courses to a caller holding
+`course:view_unpublished` without a second route.
+
+**Language.** Course text is selected from `Accept-Language`, which the web app
+sets from the active locale. An absent or unsupported value falls back to the
+default rather than erroring.
+
+Every course carries `textLocale` naming the language its text is **actually**
+in. That is not always the language requested: content is written by people and
+a translation may not exist yet, so the API falls back rather than returning an
+empty title. Clients must surface that — showing unmarked Dari to a Pashto
+reader leaves them unable to tell a missing translation from their own misreading.
+
 ## Request correlation
 
 Send `x-request-id` and it is echoed back — but only if it matches

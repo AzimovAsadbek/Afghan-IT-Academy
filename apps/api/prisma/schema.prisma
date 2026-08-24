@@ -137,7 +137,7 @@ model Role {
 
   /// Stable machine key, e.g. `INSTRUCTOR`. Referenced by the seed and by
   /// administrative tooling, so it is contract.
-  key         String  @unique
+  key         String @unique
   description String
 
   /// Seeded roles the application depends on. Guards against an administrator
@@ -349,4 +349,131 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue — see ADR 0008
+// ---------------------------------------------------------------------------
+
+/// How difficult a course is, for filtering and for setting expectations before
+/// a learner spends data on it.
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+/// Publication lifecycle.
+///
+/// Separate from soft deletion, which this project does not use: ARCHIVED means
+/// "no longer offered but still referenced by past enrollments and
+/// certificates", which is a product state, not a deleted row.
+enum CourseStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+/// A top-level area of study — IT, English, AI.
+///
+/// A table rather than an enum because the set will grow, and adding a subject
+/// should be a row, not a migration.
+///
+/// Deliberately has no translation table. `key` is a stable machine value and
+/// the display name comes from `messages/{locale}.json` in the web app, exactly
+/// like role and permission names. The distinction that matters: a controlled
+/// vocabulary the product defines is translated with the rest of the interface,
+/// while author-written course text has to live in the database.
+model Subject {
+  id String @id @default(cuid())
+
+  /// Stable machine key, e.g. `IT`. Referenced by the seed and by client
+  /// translations, so it is contract.
+  key String @unique
+
+  /// Display order in the catalogue. Explicit, because alphabetical order
+  /// differs per locale and would reshuffle the navigation between languages.
+  sortOrder Int @default(0)
+
+  /// Lets a subject be retired without deleting it or its courses.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses Course[]
+
+  @@index([isActive, sortOrder])
+  @@map("subjects")
+}
+
+/// A course. Locale-independent facts only; all prose lives in translations.
+model Course {
+  id String @id @default(cuid())
+
+  /// URL identifier, e.g. `web-development-basics`. Not localised: one stable
+  /// URL per course keeps a link shared over WhatsApp working for a speaker of
+  /// any of the three languages, and avoids three URLs competing for the same
+  /// search ranking.
+  slug String @unique
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  level  CourseLevel
+  status CourseStatus @default(DRAFT)
+
+  /// Set when the course first becomes PUBLISHED. Retained across an archive so
+  /// "published in 2026" stays true.
+  publishedAt DateTime?
+
+  /// Rough total study time. Shown before enrollment so a learner on a metered
+  /// connection knows what they are committing to.
+  estimatedMinutes Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  translations CourseTranslation[]
+
+  /// The catalogue listing: published courses, newest first.
+  @@index([status, publishedAt])
+  /// The same listing filtered to one subject.
+  @@index([subjectId, status, publishedAt])
+  @@map("courses")
+}
+
+/// Course prose in one language.
+///
+/// A row per locale rather than a JSON blob: the database can then enforce that
+/// a locale is one of the three supported, a missing translation is a visible
+/// absence rather than a silently missing JSON key, and listing courses in one
+/// language is an indexed join instead of a scan that unpacks every document.
+///
+/// A course may legitimately lack a translation — content is written by people,
+/// and Pashto often lands after Dari. The read path decides what to do about
+/// that; the schema does not pretend it cannot happen.
+model CourseTranslation {
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  locale Locale
+
+  title String
+
+  /// One or two lines for the catalogue card.
+  summary String
+
+  /// Full description for the course page.
+  description String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([courseId, locale])
+  /// Serves "give me every course's text in this locale" without touching the
+  /// other two.
+  @@index([locale])
+  @@map("course_translations")
 }
