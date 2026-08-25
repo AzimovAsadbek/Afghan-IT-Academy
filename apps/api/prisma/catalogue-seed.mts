@@ -38,6 +38,15 @@ interface SeedCourse {
   readonly level: CourseLevel;
   readonly estimatedMinutes: number;
   readonly published: boolean;
+  /**
+   * Fixed publication date, distinct per course.
+   *
+   * Distinct because a catalogue where every course published at the same
+   * instant orders entirely on the id tiebreaker, which hides whether the
+   * compound ordering works at all. Fixed rather than relative to now, because
+   * re-running the seed must not reshuffle the catalogue.
+   */
+  readonly publishedOn?: string;
   /** Deliberately partial for one course, so the fallback path has real data. */
   readonly translations: Partial<Record<SeededLocale, SeedTranslation>>;
 }
@@ -45,6 +54,7 @@ interface SeedCourse {
 const COURSES: readonly SeedCourse[] = [
   {
     slug: 'web-development-foundations',
+    publishedOn: '2026-06-01T00:00:00.000Z',
     subject: SUBJECTS.IT,
     level: 'BEGINNER',
     estimatedMinutes: 1_800,
@@ -72,6 +82,7 @@ const COURSES: readonly SeedCourse[] = [
   },
   {
     slug: 'english-for-the-workplace',
+    publishedOn: '2026-06-15T00:00:00.000Z',
     subject: SUBJECTS.ENGLISH,
     level: 'INTERMEDIATE',
     estimatedMinutes: 1_200,
@@ -99,6 +110,7 @@ const COURSES: readonly SeedCourse[] = [
   },
   {
     slug: 'introduction-to-artificial-intelligence',
+    publishedOn: '2026-07-01T00:00:00.000Z',
     subject: SUBJECTS.AI,
     level: 'BEGINNER',
     estimatedMinutes: 900,
@@ -123,6 +135,7 @@ const COURSES: readonly SeedCourse[] = [
   },
   {
     slug: 'databases-and-sql',
+    publishedOn: '2026-07-20T00:00:00.000Z',
     subject: SUBJECTS.IT,
     level: 'INTERMEDIATE',
     estimatedMinutes: 1_500,
@@ -186,9 +199,10 @@ export async function seedCatalogue(prisma: PrismaClient): Promise<void> {
         level: course.level,
         estimatedMinutes: course.estimatedMinutes,
         status: course.published ? ('PUBLISHED' as const) : ('DRAFT' as const),
-        // Stable rather than now(): re-running the seed must not reshuffle the
-        // catalogue order, which is sorted by this column.
-        publishedAt: course.published ? new Date('2026-08-01T00:00:00.000Z') : null,
+        publishedAt:
+          course.published && course.publishedOn !== undefined
+            ? new Date(course.publishedOn)
+            : null,
       };
 
       const row = await tx.course.upsert({

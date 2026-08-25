@@ -13,6 +13,7 @@ import {
   toDomainLocale,
   toStoredLocale,
 } from '../../infrastructure/prisma/index.js';
+import { fallbackChain, pickTranslation, type FallbackChain } from './translation-fallback.js';
 
 export interface CourseListQuery {
   readonly locale: DomainLocale;
@@ -54,28 +55,31 @@ export class CourseService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Ordered preference for a course's text.
+   * Which courses this caller may see in a listing.
    *
-   * Dari before English because it is the default locale and the larger
-   * audience; English last because it is the most likely to exist at all.
+   * A learner sees PUBLISHED only. A holder of `course:view_unpublished` also
+   * sees DRAFT and IN_REVIEW — the states that are on their way to being
+   * offered.
+   *
+   * **ARCHIVED is excluded from listings for everyone**, including staff. It
+   * stays reachable by direct slug so a link in an old certificate or a shared
+   * message keeps resolving, but it is not on offer and does not belong in a
+   * catalogue.
+   *
+   * The consequence is deliberate but incomplete: nobody can *find* an archived
+   * course through this API without already knowing its slug. That is a real
+   * gap for whoever eventually has to un-archive one — and it belongs to the
+   * instructor platform, which needs its own listing with its own filters
+   * anyway. Adding a status filter to the public catalogue to serve an
+   * administrative need would put content management in the discovery endpoint,
+   * which is the wrong shape. Revisit when that platform lands, not before.
    */
-  private fallbackChain(locale: DomainLocale): [DomainLocale, ...DomainLocale[]] {
-    const chain: [DomainLocale, ...DomainLocale[]] = [locale];
-    for (const candidate of ['fa-AF', 'en'] as const) {
-      if (!chain.includes(candidate)) chain.push(candidate);
-    }
-    return chain;
-  }
-
   private statusFilter(includeUnpublished: boolean): Prisma.CourseWhereInput {
-    // A learner sees published courses only. ARCHIVED is excluded from listings
-    // even for staff: it is reachable by direct slug so old certificates keep
-    // resolving, but it is not on offer.
     return includeUnpublished ? { status: { not: 'ARCHIVED' } } : { status: 'PUBLISHED' };
   }
 
   async list(query: CourseListQuery): Promise<CoursePage> {
-    const wanted = this.fallbackChain(query.locale);
+    const wanted = fallbackChain(query.locale);
 
     const where: Prisma.CourseWhereInput = {
       ...this.statusFilter(query.includeUnpublished),
@@ -109,7 +113,7 @@ export class CourseService {
     locale: DomainLocale,
     includeUnpublished: boolean,
   ): Promise<CourseDetail | null> {
-    const wanted = this.fallbackChain(locale);
+    const wanted = fallbackChain(locale);
 
     const row = await this.prisma.course.findFirst({
       where: {
@@ -130,12 +134,12 @@ export class CourseService {
     if (!row) return null;
 
     const summary = this.toSummary(row, wanted);
-    const chosen = this.pickTranslation(row.translations, wanted);
+    const chosen = pickTranslation(row.translations, wanted);
 
     return { ...summary, description: chosen?.description ?? '' };
   }
 
-  private summarySelect(wanted: readonly DomainLocale[]) {
+  private summarySelect(wanted: FallbackChain) {
     return {
       id: true,
       slug: true,
@@ -150,18 +154,6 @@ export class CourseService {
     } satisfies Prisma.CourseSelect;
   }
 
-  /** First available translation in preference order, or null if none exists. */
-  private pickTranslation<T extends { locale: StoredLocale }>(
-    translations: readonly T[],
-    wanted: readonly DomainLocale[],
-  ): T | null {
-    for (const locale of wanted) {
-      const match = translations.find((t) => toDomainLocale(t.locale) === locale);
-      if (match) return match;
-    }
-    return translations[0] ?? null;
-  }
-
   private toSummary(
     row: {
       id: string;
@@ -172,9 +164,9 @@ export class CourseService {
       subject: { key: string };
       translations: readonly { locale: StoredLocale; title: string; summary: string }[];
     },
-    wanted: readonly [DomainLocale, ...DomainLocale[]],
+    wanted: FallbackChain,
   ): CourseSummary {
-    const chosen = this.pickTranslation(row.translations, wanted);
+    const chosen = pickTranslation(row.translations, wanted);
 
     return {
       id: row.id,

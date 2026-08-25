@@ -1,21 +1,21 @@
 import {
   ERROR_CODES,
   PERMISSIONS,
-  isLocale,
+  resolveLocale,
   type CourseDetail,
   type Locale,
 } from '@afghan-it-academy/shared';
-import { Controller, Get, HttpStatus, Param, Query, Req } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param, Query, Req, UseInterceptors } from '@nestjs/common';
 import type { Request } from 'express';
 
 import {
   DomainException,
   Public,
+  VaryInterceptor,
   ZodValidationPipe,
   type AuthenticatedActor,
   type RequestWithActor,
 } from '../../common/index.js';
-import { DEFAULT_LOCALE } from '@afghan-it-academy/shared';
 import {
   courseListQuerySchema,
   courseSlugSchema,
@@ -33,6 +33,10 @@ import { CourseService, type CoursePage } from './course.service.js';
  * without a second route.
  */
 @Public()
+/* Course text is chosen by Accept-Language, so every response here depends on
+ * it. Declaring that keeps a shared cache from serving one locale's copy to
+ * everyone. */
+@UseInterceptors(new VaryInterceptor('Accept-Language'))
 @Controller({ path: 'courses', version: '1' })
 export class CourseController {
   constructor(private readonly courses: CourseService) {}
@@ -76,19 +80,22 @@ export class CourseController {
   /**
    * Which language to return course text in.
    *
-   * From `Accept-Language`, which the web app sets from the active locale. An
-   * unrecognised or absent header falls back to the default rather than
-   * erroring: a missing header is an ordinary request from a script or a crawler,
-   * not a client mistake worth rejecting.
+   * Delegates to the shared `resolveLocale`, which already ranks by q-value and
+   * falls back through the tag hierarchy — `en-US` to `en`, `fa-IR` to `fa-AF`.
+   *
+   * An earlier version of this method matched the first tag exactly, on the
+   * assumption that the only caller would be our own web app sending a single
+   * locale. That assumption was wrong twice over: it is untestable until the
+   * client exists, and it is false for every crawler and non-app consumer, all
+   * of which send `en-US,en;q=0.9` and were quietly served Dari.
+   *
+   * An unrecognised or absent header still falls back to the default rather
+   * than erroring: a missing header is an ordinary request, not a client
+   * mistake worth rejecting.
    */
   private localeOf(request: Request): Locale {
     const header = request.headers['accept-language'];
-    if (typeof header !== 'string') return DEFAULT_LOCALE;
-
-    // Take the first tag only. Full q-value negotiation buys nothing here: the
-    // client is our own app and sends exactly one locale.
-    const first = header.split(',')[0]?.trim() ?? '';
-    return isLocale(first) ? first : DEFAULT_LOCALE;
+    return resolveLocale(typeof header === 'string' ? header : null);
   }
 
   /**

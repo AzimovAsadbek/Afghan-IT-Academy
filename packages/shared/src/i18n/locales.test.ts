@@ -61,6 +61,17 @@ describe('resolveLocale', () => {
     expect(resolveLocale('fa-IR,fa;q=0.9')).toBe('fa-AF');
   });
 
+  /**
+   * The header every real browser sends. A catalogue endpoint once matched the
+   * first tag exactly and served Dari to every English speaker on the internet,
+   * so these stay pinned.
+   */
+  it('resolves a regional English tag to English', () => {
+    expect(resolveLocale('en-US,en;q=0.9')).toBe('en');
+    expect(resolveLocale('en-GB')).toBe('en');
+    expect(resolveLocale('en-US')).toBe('en');
+  });
+
   it('honours quality values', () => {
     expect(resolveLocale('de;q=0.9,en;q=0.8')).toBe('en');
     expect(resolveLocale('en;q=0.2,ps-AF;q=0.9')).toBe('ps-AF');

@@ -220,6 +220,34 @@ describe('Catalogue (e2e)', () => {
       expect(response.body.textLocale).toBe('fa-AF');
     });
 
+    /**
+     * The header every real browser sends. This endpoint once matched the first
+     * tag exactly and served Dari to every English speaker, so it is pinned at
+     * the API boundary and not only in the resolver's own unit tests.
+     */
+    it.each([
+      ['en-US,en;q=0.9', 'en'],
+      ['en-GB', 'en'],
+      ['fa-IR,fa;q=0.9', 'fa-AF'],
+      ['ps-PK', 'ps-AF'],
+    ])('resolves %s to %s', async (header, expected) => {
+      const response = await request(server())
+        .get(`${prefix}/v1/courses/web-development-foundations`)
+        .set('Accept-Language', header)
+        .expect(200);
+
+      expect((response.body as { textLocale: string }).textLocale).toBe(expected);
+    });
+
+    it('honours quality values rather than taking the first tag', async () => {
+      const response = await request(server())
+        .get(`${prefix}/v1/courses/web-development-foundations`)
+        .set('Accept-Language', 'en;q=0.2,ps-AF;q=0.9')
+        .expect(200);
+
+      expect((response.body as { textLocale: string }).textLocale).toBe('ps-AF');
+    });
+
     it('ignores an unsupported language rather than failing the request', async () => {
       const response = await request(server())
         .get(`${prefix}/v1/courses/web-development-foundations`)
@@ -274,6 +302,324 @@ describe('Catalogue (e2e)', () => {
         .expect(400);
 
       expect(response.body.error.code).toBe('VALIDATION_FAILED');
+    });
+  });
+
+  /**
+   * Creates a fixture course.
+   *
+   * Fixtures live in the tests rather than in the shared seed on purpose. The
+   * seed is representative catalogue content that every developer and any demo
+   * environment sees; an archived sample and four courses with hand-picked
+   * timestamps are neither. A test that needs peculiar data should own it and
+   * clean it up.
+   *
+   * Every fixture is `subject: AI, level: ADVANCED` — a combination the seed
+   * does not use, so `?subject=AI&level=ADVANCED` isolates exactly this block's
+   * rows and the assertions do not shift when the seed gains a course.
+   */
+  async function makeCourse(input: {
+    slug: string;
+    status: 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
+    publishedAt?: Date | null;
+  }): Promise<void> {
+    const subject = await prisma.subject.findUniqueOrThrow({
+      where: { key: 'AI' },
+      select: { id: true },
+    });
+
+    await prisma.course.create({
+      data: {
+        slug: input.slug,
+        subjectId: subject.id,
+        level: 'ADVANCED',
+        status: input.status,
+        publishedAt: input.publishedAt ?? null,
+        estimatedMinutes: 60,
+        translations: {
+          create: [{ locale: 'en', title: input.slug, summary: 's', description: 'd' }],
+        },
+      },
+      select: { id: true },
+    });
+  }
+
+  async function dropCourses(slugs: readonly string[]): Promise<void> {
+    await prisma.course.deleteMany({ where: { slug: { in: [...slugs] } } });
+  }
+
+  /** Only this block's fixtures, in the API's compound order. */
+  async function fixtureSlugs(token?: string): Promise<string[]> {
+    const call = request(server())
+      .get(`${prefix}/v1/courses`)
+      .query({ subject: 'AI', level: 'ADVANCED', limit: 20 });
+
+    if (token !== undefined) call.set('Authorization', `Bearer ${token}`);
+
+    const response = await call.expect(200);
+    return slugsOf(response.body);
+  }
+
+  describe('status visibility', () => {
+    const SLUGS = [
+      'fixture-status-published',
+      'fixture-status-draft',
+      'fixture-status-in-review',
+      'fixture-status-archived',
+    ];
+
+    beforeAll(async () => {
+      await dropCourses(SLUGS);
+      await makeCourse({
+        slug: 'fixture-status-published',
+        status: 'PUBLISHED',
+        publishedAt: new Date('2026-05-01T00:00:00.000Z'),
+      });
+      await makeCourse({ slug: 'fixture-status-draft', status: 'DRAFT' });
+      await makeCourse({ slug: 'fixture-status-in-review', status: 'IN_REVIEW' });
+      await makeCourse({
+        slug: 'fixture-status-archived',
+        status: 'ARCHIVED',
+        publishedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+    });
+
+    afterAll(async () => {
+      await dropCourses(SLUGS);
+    });
+
+    it('shows a learner published courses and nothing else', async () => {
+      expect(await fixtureSlugs()).toEqual(['fixture-status-published']);
+    });
+
+    it.each([
+      ['fixture-status-draft', 404],
+      ['fixture-status-in-review', 404],
+      ['fixture-status-published', 200],
+      // Archived stays reachable by slug so a link in an old certificate or a
+      // shared message keeps resolving, even though it is no longer on offer.
+      ['fixture-status-archived', 200],
+    ])('serves %s as %i to an anonymous caller', async (slug, status) => {
+      await request(server()).get(`${prefix}/v1/courses/${slug}`).expect(status);
+    });
+
+    /**
+     * Documented current behaviour, pinned so a change is deliberate: a holder
+     * of course:view_unpublished sees drafts and in-review in the listing, but
+     * archived courses are excluded from listings for everyone. Managing
+     * archived content is an instructor-platform concern that does not exist
+     * yet.
+     */
+    it('shows a privileged caller everything except archived, in the listing', async () => {
+      const token = await signInAs(ROLES.CONTENT_REVIEWER);
+      const slugs = await fixtureSlugs(token);
+
+      expect(slugs).toContain('fixture-status-published');
+      expect(slugs).toContain('fixture-status-draft');
+      expect(slugs).toContain('fixture-status-in-review');
+      expect(slugs).not.toContain('fixture-status-archived');
+    });
+
+    it('serves every status by slug to a privileged caller', async () => {
+      const token = await signInAs(ROLES.CONTENT_REVIEWER);
+
+      for (const slug of SLUGS) {
+        await request(server())
+          .get(`${prefix}/v1/courses/${slug}`)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+      }
+    });
+  });
+
+  /**
+   * The seeded catalogue gives every published course the same `publishedAt`,
+   * so ordering there rests entirely on the id tiebreaker and a compound-key
+   * bug would go unnoticed. These fixtures deliberately pair two courses on one
+   * timestamp and two on another, so paging has to cross a `publishedAt`
+   * boundary *and* resolve a tie within it.
+   */
+  describe('compound cursor pagination', () => {
+    const NEWER = new Date('2026-07-02T00:00:00.000Z');
+    const OLDER = new Date('2026-07-01T00:00:00.000Z');
+    const SLUGS = ['fixture-page-a', 'fixture-page-b', 'fixture-page-c', 'fixture-page-d'];
+
+    beforeAll(async () => {
+      await dropCourses(SLUGS);
+      await makeCourse({ slug: 'fixture-page-a', status: 'PUBLISHED', publishedAt: NEWER });
+      await makeCourse({ slug: 'fixture-page-b', status: 'PUBLISHED', publishedAt: NEWER });
+      await makeCourse({ slug: 'fixture-page-c', status: 'PUBLISHED', publishedAt: OLDER });
+      await makeCourse({ slug: 'fixture-page-d', status: 'PUBLISHED', publishedAt: OLDER });
+    });
+
+    afterAll(async () => {
+      await dropCourses(SLUGS);
+    });
+
+    /** Walks every page of the isolated fixture set at a given page size. */
+    async function walk(limit: number): Promise<string[]> {
+      const seen: string[] = [];
+      let cursor: string | null = null;
+
+      for (let guard = 0; guard < 20; guard += 1) {
+        const query: Record<string, string | number> = {
+          subject: 'AI',
+          level: 'ADVANCED',
+          limit,
+        };
+        if (cursor !== null) query.cursor = cursor;
+
+        const response = await request(server())
+          .get(`${prefix}/v1/courses`)
+          .query(query)
+          .expect(200);
+
+        const body = page(response.body);
+        seen.push(...body.items.map((course) => course.slug));
+
+        cursor = body.nextCursor;
+        if (cursor === null) return seen;
+      }
+
+      throw new Error('Pagination did not terminate');
+    }
+
+    it('returns the full set exactly once at every page size', async () => {
+      for (const limit of [1, 2, 3, 4]) {
+        const seen = await walk(limit);
+
+        expect(new Set(seen).size, `duplicates at limit=${String(limit)}`).toBe(seen.length);
+        expect([...seen].sort(), `missing rows at limit=${String(limit)}`).toEqual(
+          [...SLUGS].sort(),
+        );
+      }
+    });
+
+    it('orders by publishedAt then id, both descending', async () => {
+      const response = await request(server())
+        .get(`${prefix}/v1/courses`)
+        .query({ subject: 'AI', level: 'ADVANCED', limit: 20 })
+        .expect(200);
+
+      const items = page(response.body).items;
+
+      // The two newer courses come first as a pair, whichever way the id tie
+      // resolves; the older pair follows.
+      expect(
+        items
+          .slice(0, 2)
+          .map((course) => course.slug)
+          .sort(),
+      ).toEqual(['fixture-page-a', 'fixture-page-b']);
+      expect(
+        items
+          .slice(2, 4)
+          .map((course) => course.slug)
+          .sort(),
+      ).toEqual(['fixture-page-c', 'fixture-page-d']);
+
+      for (let i = 1; i < items.length; i += 1) {
+        const previous = items[i - 1];
+        const current = items[i];
+        if (!previous || !current) throw new Error('unexpected gap');
+
+        const earlier = previous.publishedAt ?? '';
+        const later = current.publishedAt ?? '';
+
+        // Non-increasing by publishedAt; id strictly decreasing within a tie.
+        expect(earlier >= later).toBe(true);
+        if (earlier === later) expect(previous.id > current.id).toBe(true);
+      }
+    });
+
+    it('resumes exactly after the cursor row rather than restarting', async () => {
+      const first = await request(server())
+        .get(`${prefix}/v1/courses`)
+        .query({ subject: 'AI', level: 'ADVANCED', limit: 1 })
+        .expect(200);
+
+      const firstSlug = page(first.body).items[0]?.slug;
+      const cursor = page(first.body).nextCursor;
+      expect(cursor).toEqual(expect.any(String));
+
+      const second = await request(server())
+        .get(`${prefix}/v1/courses`)
+        .query({ subject: 'AI', level: 'ADVANCED', limit: 1, cursor })
+        .expect(200);
+
+      expect(page(second.body).items[0]?.slug).not.toBe(firstSlug);
+    });
+
+    it('terminates with a null cursor on the last page', async () => {
+      const response = await request(server())
+        .get(`${prefix}/v1/courses`)
+        .query({ subject: 'AI', level: 'ADVANCED', limit: 4 })
+        .expect(200);
+
+      expect(page(response.body).items).toHaveLength(4);
+      expect(page(response.body).nextCursor).toBeNull();
+    });
+  });
+
+  describe('caching', () => {
+    /**
+     * The response body is chosen by Accept-Language, so a shared cache has to
+     * know that. Without this a CDN serves whichever locale it saw first to
+     * everyone — and the origin looks perfectly correct while it happens.
+     */
+    it('declares that the response varies by Accept-Language', async () => {
+      const response = await request(server()).get(`${prefix}/v1/courses`).expect(200);
+
+      const vary = (response.headers.vary ?? '').toLowerCase();
+      expect(vary).toContain('accept-language');
+    });
+
+    it('keeps the Vary values CORS and compression added', async () => {
+      const response = await request(server())
+        .get(`${prefix}/v1/courses`)
+        .set('Origin', 'http://localhost:3000')
+        .expect(200);
+
+      const vary = (response.headers.vary ?? '').toLowerCase();
+      expect(vary).toContain('origin');
+      expect(vary).toContain('accept-encoding');
+      expect(vary).toContain('accept-language');
+    });
+
+    it('declares Vary on a 404 too, so a miss cannot be cached across locales', async () => {
+      const response = await request(server())
+        .get(`${prefix}/v1/courses/no-such-course-at-all`)
+        .expect(404);
+
+      expect((response.headers.vary ?? '').toLowerCase()).toContain('accept-language');
+    });
+
+    it('gives each locale a distinct ETag for the same URL', async () => {
+      const tags = new Set<string>();
+
+      for (const locale of ['en', 'fa-AF', 'ps-AF']) {
+        const response = await request(server())
+          .get(`${prefix}/v1/courses/web-development-foundations`)
+          .set('Accept-Language', locale)
+          .expect(200);
+
+        tags.add(String(response.headers.etag));
+      }
+
+      expect(tags.size).toBe(3);
+    });
+
+    it('does not answer 304 when the cached copy is a different locale', async () => {
+      const english = await request(server())
+        .get(`${prefix}/v1/courses/web-development-foundations`)
+        .set('Accept-Language', 'en')
+        .expect(200);
+
+      await request(server())
+        .get(`${prefix}/v1/courses/web-development-foundations`)
+        .set('Accept-Language', 'fa-AF')
+        .set('If-None-Match', String(english.headers.etag))
+        .expect(200);
     });
   });
 
