@@ -23,7 +23,7 @@ describe('Catalogue (e2e)', () => {
   let passwords: PasswordService;
   let prefix = '';
 
-  const PASSWORD = 'catalogue-e2e-passphrase-1';
+  const PASSWORD = 'catalogue-suite-passphrase';
   const context = { ipPrefix: null, userAgent: null, requestId: null };
 
   beforeAll(async () => {
