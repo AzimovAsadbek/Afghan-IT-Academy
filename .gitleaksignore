@@ -9,19 +9,22 @@
 # a rule or excluding `apps/api/test/**` would silence every future finding in
 # that scope, which is how a real leak eventually ships behind a green build.
 #
+# Do not quote the flagged value in a comment here. The scanner reads this file
+# too, and a verbatim copy simply moves the finding rather than resolving it.
+#
 # Before adding a line: confirm the value is not a credential, cannot become
 # one, and grants access to nothing. If in doubt, rotate it instead.
 
-# `const PASSWORD = 'catalogue-e2e-passphrase-1'` in the catalogue e2e suite.
+# The `PASSWORD` constant in the catalogue e2e suite, as it stood in 307f073.
 #
-# A throwaway passphrase for an account the test creates and deletes against a
+# A throwaway passphrase for an account the suite creates and deletes against a
 # local database. It authenticates nothing outside that suite and exists in no
 # environment. gitleaks' generic-api-key rule matched the mixed alphanumeric
-# shape the trailing `-1` produced; the identical `const PASSWORD` declarations
-# in auth.e2e-spec.ts and authorization.e2e-spec.ts have never matched, and one
-# of them scores *higher* on entropy — the digit was the discriminator.
+# shape a trailing digit produced; the identical `PASSWORD` declarations in
+# auth.e2e-spec.ts and authorization.e2e-spec.ts have never matched, and one of
+# them scores higher on entropy — the digit was the discriminator, not entropy.
 #
-# The string was renamed to `catalogue-suite-passphrase` in 6fbcb94 so no future
-# commit repeats it. This entry covers only the historical commit, whose diff
-# cannot be changed without rewriting published history.
+# The constant was renamed in 6fbcb94 so no later commit repeats the shape. This
+# entry covers only the historical commit, whose diff cannot be changed without
+# rewriting published history.
 307f07381803ce0f7971470984036462af85187b:apps/api/test/catalogue.e2e-spec.ts:generic-api-key:26
