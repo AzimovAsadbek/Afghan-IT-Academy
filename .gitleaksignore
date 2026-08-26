@@ -1,0 +1,27 @@
+# Reviewed false positives, one fingerprint per line.
+#
+# A fingerprint is `commit:path:rule:line`. It suppresses exactly one finding in
+# exactly one commit — not a rule, not a path, not a file pattern. Every entry
+# here is a finding a human looked at and judged not to be a credential, and it
+# stops applying the moment the surrounding code changes.
+#
+# This file exists instead of a `.gitleaks.toml` allowlist on purpose. Disabling
+# a rule or excluding `apps/api/test/**` would silence every future finding in
+# that scope, which is how a real leak eventually ships behind a green build.
+#
+# Before adding a line: confirm the value is not a credential, cannot become
+# one, and grants access to nothing. If in doubt, rotate it instead.
+
+# `const PASSWORD = 'catalogue-e2e-passphrase-1'` in the catalogue e2e suite.
+#
+# A throwaway passphrase for an account the test creates and deletes against a
+# local database. It authenticates nothing outside that suite and exists in no
+# environment. gitleaks' generic-api-key rule matched the mixed alphanumeric
+# shape the trailing `-1` produced; the identical `const PASSWORD` declarations
+# in auth.e2e-spec.ts and authorization.e2e-spec.ts have never matched, and one
+# of them scores *higher* on entropy — the digit was the discriminator.
+#
+# The string was renamed to `catalogue-suite-passphrase` in 6fbcb94 so no future
+# commit repeats it. This entry covers only the historical commit, whose diff
+# cannot be changed without rewriting published history.
+307f07381803ce0f7971470984036462af85187b:apps/api/test/catalogue.e2e-spec.ts:generic-api-key:26
