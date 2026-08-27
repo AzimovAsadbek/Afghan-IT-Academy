@@ -30,7 +30,7 @@
       "password": "پټ‌نوم",
       "newPassword": "نوی پټ‌نوم",
       "currentPassword": "اوسنی پټ‌نوم",
-      "passwordHint": "لږ تر لږه {min, number} توري.",
+      "passwordHint": "لږ تر لږه {min} توري.",
       "showPassword": "پټ‌نوم ښکاره کړئ",
       "hidePassword": "پټ‌نوم پټ کړئ",
       "back": "شاته",
@@ -92,7 +92,7 @@
       "unknownDevice": "ناڅرګنده وسیله",
       "revoke": "دا وسیله وباسئ",
       "revokeOthers": "ټول نور وسایل وباسئ",
-      "revokedOthers": "{count, plural, =0 {بله وسیله نه وه ننوتې.} one {یوه بله وسیله وویستل شوه.} other {# نور وسایل وویستل شول.}}"
+      "revokedOthers": "{count, plural, =0 {بله وسیله نه وه ننوتې.} one {یوه بله وسیله وویستل شوه.} other {{countText} نور وسایل وویستل شول.}}"
     }
   },
   "errors": {
@@ -145,10 +145,10 @@
       "ADVANCED": "پرمختللی"
     },
     "card": {
-      "duration": "{hours, plural, =0 {له یوه ساعت لږ} other {شاوخوا # ساعته}}",
+      "duration": "{hours, plural, =0 {له یوه ساعت لږ} other {شاوخوا {hoursText} ساعته}}",
       "view": "کورس وګورئ"
     },
-    "count": "{count, plural, =0 {هیڅ کورس نشته} other {# کورسونه}}",
+    "count": "{count, plural, =0 {هیڅ کورس نشته} other {{countText} کورسونه}}",
     "empty": {
       "heading": "د دې فلټرونو سره څه ونه موندل شول",
       "body": "بله موضوع یا کچه وازمایئ، یا فلټرونه پاک کړئ چې ټول وګورئ."

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_LOCALE,
+  formatNumber,
+  numberFormatOptions,
   LOCALES,
   LOCALE_METADATA,
   getDirection,
@@ -83,5 +85,44 @@ describe('resolveLocale', () => {
 
   it('tolerates malformed quality values', () => {
     expect(resolveLocale('en;q=notanumber,ps-AF')).toBe('ps-AF');
+  });
+});
+
+/**
+ * These pin the digits a reader actually sees, and they exist because the
+ * runtime cannot be trusted to agree: Node resolves `ps-AF` to `arabext`, while
+ * Chrome ships no Pashto data at all, falls back to `en-US`, and renders Latin
+ * digits. The same page server-rendered ۱۲ and hydrated to 12.
+ */
+describe('formatNumber', () => {
+  it('renders Latin digits for English', () => {
+    expect(formatNumber(15, 'en')).toBe('15');
+  });
+
+  it('renders Arabic-Indic digits for Dari', () => {
+    expect(formatNumber(15, 'fa-AF')).toBe('۱۵');
+  });
+
+  it('renders Arabic-Indic digits for Pashto, whatever the runtime would default to', () => {
+    expect(formatNumber(15, 'ps-AF')).toBe('۱۵');
+  });
+
+  it('agrees with the locale metadata rather than with the runtime', () => {
+    for (const locale of LOCALES) {
+      expect(numberFormatOptions(locale).numberingSystem).toBe(
+        LOCALE_METADATA[locale].numberingSystem,
+      );
+    }
+  });
+
+  /**
+   * The mechanism matters. The `-u-nu-` extension is the more obvious fix and
+   * the wrong one: Chrome drops it for a locale it has no data for, so it would
+   * pass here and fail in the browser. Only the explicit option survives.
+   */
+  it('pins the numbering system as an option, not as a locale extension', () => {
+    const options = numberFormatOptions('ps-AF');
+    expect(options.numberingSystem).toBe('arabext');
+    expect(new Intl.NumberFormat('ps-AF', options).format(0)).toBe('۰');
   });
 });

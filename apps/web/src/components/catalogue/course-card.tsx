@@ -1,5 +1,5 @@
 import type { CourseSummary } from '@afghan-it-academy/shared/catalogue';
-import { LOCALE_METADATA, type Locale } from '@afghan-it-academy/shared/i18n';
+import { LOCALE_METADATA, formatNumber, type Locale } from '@afghan-it-academy/shared/i18n';
 import { Badge } from '@afghan-it-academy/ui';
 import { useTranslations } from 'next-intl';
 
@@ -46,7 +46,9 @@ export function CourseCard({ course, locale }: { course: CourseSummary; locale: 
           <p className="text-ink-700 text-pretty text-sm">{course.summary}</p>
         )}
 
-        <p className="text-ink-700 mt-auto text-sm">{t('card.duration', { hours })}</p>
+        <p className="text-ink-700 mt-auto text-sm">
+          {t('card.duration', { hours, hoursText: formatNumber(hours, locale) })}
+        </p>
       </Link>
     </li>
   );

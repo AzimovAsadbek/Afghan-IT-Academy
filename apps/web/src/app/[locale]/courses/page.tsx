@@ -1,4 +1,5 @@
 import { isCourseLevel, isSubjectKey } from '@afghan-it-academy/shared/catalogue';
+import { formatNumber } from '@afghan-it-academy/shared/i18n';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
@@ -83,7 +84,10 @@ export default async function CoursesPage(props: {
       ) : (
         <section aria-labelledby="results-heading" className="flex flex-col gap-5">
           <h2 id="results-heading" className="text-ink-700 text-sm">
-            {t('count', { count: page.items.length })}
+            {t('count', {
+              count: page.items.length,
+              countText: formatNumber(page.items.length, locale),
+            })}
           </h2>
 
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

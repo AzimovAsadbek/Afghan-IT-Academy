@@ -30,7 +30,7 @@
       "password": "رمز عبور",
       "newPassword": "رمز عبور جدید",
       "currentPassword": "رمز عبور فعلی",
-      "passwordHint": "حداقل {min, number} حرف.",
+      "passwordHint": "حداقل {min} حرف.",
       "showPassword": "نمایش رمز عبور",
       "hidePassword": "پنهان کردن رمز عبور",
       "back": "بازگشت",
@@ -92,7 +92,7 @@
       "unknownDevice": "دستگاه ناشناس",
       "revoke": "خروج این دستگاه",
       "revokeOthers": "خروج همه‌ی دستگاه‌های دیگر",
-      "revokedOthers": "{count, plural, =0 {دستگاه دیگری وارد نشده بود.} one {یک دستگاه دیگر خارج شد.} other {# دستگاه دیگر خارج شدند.}}"
+      "revokedOthers": "{count, plural, =0 {دستگاه دیگری وارد نشده بود.} one {یک دستگاه دیگر خارج شد.} other {{countText} دستگاه دیگر خارج شدند.}}"
     }
   },
   "errors": {
@@ -145,10 +145,10 @@
       "ADVANCED": "پیشرفته"
     },
     "card": {
-      "duration": "{hours, plural, =0 {کمتر از یک ساعت} other {حدود # ساعت}}",
+      "duration": "{hours, plural, =0 {کمتر از یک ساعت} other {حدود {hoursText} ساعت}}",
       "view": "دیدن کورس"
     },
-    "count": "{count, plural, =0 {بدون کورس} other {# کورس}}",
+    "count": "{count, plural, =0 {بدون کورس} other {{countText} کورس}}",
     "empty": {
       "heading": "چیزی با این فیلترها پیدا نشد",
       "body": "موضوع یا سطح دیگری را امتحان کنید، یا فیلترها را پاک کنید تا همه را ببینید."

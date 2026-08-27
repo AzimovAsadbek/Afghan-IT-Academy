@@ -1,9 +1,10 @@
 'use client';
 
+import { LOCALE_METADATA, formatNumber, type Locale } from '@afghan-it-academy/shared/i18n';
 import { PASSWORD_MIN_LENGTH } from '@afghan-it-academy/shared/policy';
 import { Alert, Button, Field } from '@afghan-it-academy/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { useRouter } from '@/i18n/navigation';
@@ -30,6 +31,7 @@ export function AccountPanel() {
   const describeError = useErrorMessage();
   const describeField = useFieldErrorMessage();
   const format = useFormatter();
+  const locale = useLocale() as Locale;
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -142,7 +144,7 @@ export function AccountPanel() {
             type="password"
             autoComplete="new-password"
             required
-            hint={shared('passwordHint', { min: PASSWORD_MIN_LENGTH })}
+            hint={shared('passwordHint', { min: formatNumber(PASSWORD_MIN_LENGTH, locale) })}
             error={describeField(fieldRules.newPassword)}
           />
 
@@ -179,6 +181,9 @@ export function AccountPanel() {
                       when: format.dateTime(new Date(session.lastSeenAt), {
                         dateStyle: 'medium',
                         timeStyle: 'short',
+                        // Pinned for the same reason numbers are: Chrome has no
+                        // Pashto data and would otherwise render Latin digits.
+                        numberingSystem: LOCALE_METADATA[locale].numberingSystem,
                       }),
                     })}
                   </span>
@@ -218,7 +223,12 @@ export function AccountPanel() {
         </div>
 
         {revokeOthers.isSuccess && (
-          <Alert tone="success">{t('revokedOthers', { count: revokeOthers.data.revoked })}</Alert>
+          <Alert tone="success">
+            {t('revokedOthers', {
+              count: revokeOthers.data.revoked,
+              countText: formatNumber(revokeOthers.data.revoked, locale),
+            })}
+          </Alert>
         )}
       </section>
     </div>

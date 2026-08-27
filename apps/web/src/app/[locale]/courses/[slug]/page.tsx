@@ -1,4 +1,4 @@
-import { LOCALE_METADATA, type Locale } from '@afghan-it-academy/shared/i18n';
+import { LOCALE_METADATA, formatNumber, type Locale } from '@afghan-it-academy/shared/i18n';
 import { Badge, Button } from '@afghan-it-academy/ui';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
@@ -105,7 +105,10 @@ export default async function CoursePage(props: { params: Promise<RouteParams> }
       <dl className="border-brand-100 grid gap-4 rounded-[--radius-card] border p-4 sm:grid-cols-3">
         <Fact label={t('detail.subject')} value={t(`subjects.${course.subject}`)} />
         <Fact label={t('detail.level')} value={t(`levels.${course.level}`)} />
-        <Fact label={t('detail.duration')} value={t('card.duration', { hours })} />
+        <Fact
+          label={t('detail.duration')}
+          value={t('card.duration', { hours, hoursText: formatNumber(hours, locale) })}
+        />
       </dl>
 
       {course.description.length > 0 && (

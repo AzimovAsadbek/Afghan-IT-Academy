@@ -1,6 +1,6 @@
 'use client';
 
-import type { Locale } from '@afghan-it-academy/shared/i18n';
+import { formatNumber, type Locale } from '@afghan-it-academy/shared/i18n';
 import { PASSWORD_MIN_LENGTH } from '@afghan-it-academy/shared/policy';
 import { Alert, Button, Field } from '@afghan-it-academy/ui';
 import { useMutation } from '@tanstack/react-query';
@@ -92,7 +92,7 @@ export function RegisterForm() {
         type="password"
         autoComplete="new-password"
         required
-        hint={shared('passwordHint', { min: PASSWORD_MIN_LENGTH })}
+        hint={shared('passwordHint', { min: formatNumber(PASSWORD_MIN_LENGTH, locale) })}
         error={describeField(fieldRules.password)}
       />
 

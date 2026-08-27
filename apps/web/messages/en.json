@@ -30,7 +30,7 @@
       "password": "Password",
       "newPassword": "New password",
       "currentPassword": "Current password",
-      "passwordHint": "At least {min, number} characters.",
+      "passwordHint": "At least {min} characters.",
       "showPassword": "Show password",
       "hidePassword": "Hide password",
       "back": "Back",
@@ -92,7 +92,7 @@
       "unknownDevice": "Unknown device",
       "revoke": "Sign out this device",
       "revokeOthers": "Sign out all other devices",
-      "revokedOthers": "{count, plural, =0 {No other devices were signed in.} one {One other device was signed out.} other {# other devices were signed out.}}"
+      "revokedOthers": "{count, plural, =0 {No other devices were signed in.} one {One other device was signed out.} other {{countText} other devices were signed out.}}"
     }
   },
   "errors": {
@@ -145,10 +145,10 @@
       "ADVANCED": "Advanced"
     },
     "card": {
-      "duration": "{hours, plural, =0 {Under an hour} one {About # hour} other {About # hours}}",
+      "duration": "{hours, plural, =0 {Under an hour} one {About {hoursText} hour} other {About {hoursText} hours}}",
       "view": "View course"
     },
-    "count": "{count, plural, =0 {No courses} one {# course} other {# courses}}",
+    "count": "{count, plural, =0 {No courses} one {{countText} course} other {{countText} courses}}",
     "empty": {
       "heading": "Nothing matches those filters",
       "body": "Try a different subject or level, or clear the filters to see everything."
