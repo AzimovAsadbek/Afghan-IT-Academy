@@ -30,7 +30,7 @@
       "password": "Password",
       "newPassword": "New password",
       "currentPassword": "Current password",
-      "passwordHint": "At least {min, number} characters.",
+      "passwordHint": "At least {min} characters.",
       "showPassword": "Show password",
       "hidePassword": "Hide password",
       "back": "Back",
@@ -92,7 +92,7 @@
       "unknownDevice": "Unknown device",
       "revoke": "Sign out this device",
       "revokeOthers": "Sign out all other devices",
-      "revokedOthers": "{count, plural, =0 {No other devices were signed in.} one {One other device was signed out.} other {# other devices were signed out.}}"
+      "revokedOthers": "{count, plural, =0 {No other devices were signed in.} one {One other device was signed out.} other {{countText} other devices were signed out.}}"
     }
   },
   "errors": {
@@ -122,6 +122,59 @@
       "invalid_token": "This link is not valid.",
       "must_differ": "Choose a password different from your current one.",
       "unknown": "This value is not accepted."
+    }
+  },
+  "catalogue": {
+    "title": "Courses",
+    "subtitle": "Practical IT, English and AI courses you can finish on a phone.",
+    "filters": {
+      "heading": "Narrow it down",
+      "subject": "Subject",
+      "level": "Level",
+      "all": "All",
+      "clear": "Clear filters"
+    },
+    "subjects": {
+      "IT": "IT",
+      "ENGLISH": "English",
+      "AI": "AI"
+    },
+    "levels": {
+      "BEGINNER": "Beginner",
+      "INTERMEDIATE": "Intermediate",
+      "ADVANCED": "Advanced"
+    },
+    "card": {
+      "duration": "{hours, plural, =0 {Under an hour} one {About {hoursText} hour} other {About {hoursText} hours}}",
+      "view": "View course"
+    },
+    "count": "{count, plural, =0 {No courses} one {{countText} course} other {{countText} courses}}",
+    "empty": {
+      "heading": "Nothing matches those filters",
+      "body": "Try a different subject or level, or clear the filters to see everything."
+    },
+    "error": {
+      "heading": "We could not load the courses",
+      "body": "Check your connection and try again."
+    },
+    "pagination": {
+      "next": "More courses",
+      "previous": "Back"
+    },
+    "translation": {
+      "notice": "Shown in {language} — not yet translated.",
+      "short": "In {language}"
+    },
+    "detail": {
+      "about": "About this course",
+      "level": "Level",
+      "subject": "Subject",
+      "duration": "Study time",
+      "back": "All courses",
+      "enrol": "Start learning",
+      "enrolSoon": "Enrolment opens soon",
+      "notFound": "We could not find that course",
+      "notFoundBody": "It may have been renamed or is no longer offered."
     }
   }
 }

@@ -1,9 +1,10 @@
 'use client';
 
+import { formatNumber, type Locale } from '@afghan-it-academy/shared/i18n';
 import { PASSWORD_MIN_LENGTH } from '@afghan-it-academy/shared/policy';
 import { Alert, Button, Field } from '@afghan-it-academy/ui';
 import { useMutation } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
@@ -26,6 +27,7 @@ export function ResetPasswordForm() {
   const shared = useTranslations('auth.shared');
   const describeError = useErrorMessage();
   const describeField = useFieldErrorMessage();
+  const locale = useLocale() as Locale;
 
   const token = useSearchParams().get('token');
   const [fieldRules, setFieldRules] = useState<Record<string, string>>({});
@@ -75,7 +77,7 @@ export function ResetPasswordForm() {
         type="password"
         autoComplete="new-password"
         required
-        hint={shared('passwordHint', { min: PASSWORD_MIN_LENGTH })}
+        hint={shared('passwordHint', { min: formatNumber(PASSWORD_MIN_LENGTH, locale) })}
         error={describeField(fieldRules.newPassword)}
       />
 

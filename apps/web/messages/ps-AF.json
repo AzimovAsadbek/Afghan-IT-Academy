@@ -30,7 +30,7 @@
       "password": "پټ‌نوم",
       "newPassword": "نوی پټ‌نوم",
       "currentPassword": "اوسنی پټ‌نوم",
-      "passwordHint": "لږ تر لږه {min, number} توري.",
+      "passwordHint": "لږ تر لږه {min} توري.",
       "showPassword": "پټ‌نوم ښکاره کړئ",
       "hidePassword": "پټ‌نوم پټ کړئ",
       "back": "شاته",
@@ -92,7 +92,7 @@
       "unknownDevice": "ناڅرګنده وسیله",
       "revoke": "دا وسیله وباسئ",
       "revokeOthers": "ټول نور وسایل وباسئ",
-      "revokedOthers": "{count, plural, =0 {بله وسیله نه وه ننوتې.} one {یوه بله وسیله وویستل شوه.} other {# نور وسایل وویستل شول.}}"
+      "revokedOthers": "{count, plural, =0 {بله وسیله نه وه ننوتې.} one {یوه بله وسیله وویستل شوه.} other {{countText} نور وسایل وویستل شول.}}"
     }
   },
   "errors": {
@@ -122,6 +122,59 @@
       "invalid_token": "دا لینک سم نه دی.",
       "must_differ": "د اوسني پټ‌نوم څخه بېل پټ‌نوم وټاکئ.",
       "unknown": "دا ارزښت نه منل کېږي."
+    }
+  },
+  "catalogue": {
+    "title": "کورسونه",
+    "subtitle": "د آی‌ټي، انګلیسي او مصنوعي ځیرکتیا عملي کورسونه چې په موبایل هم بشپړېږي.",
+    "filters": {
+      "heading": "پایلې محدودې کړئ",
+      "subject": "موضوع",
+      "level": "کچه",
+      "all": "ټول",
+      "clear": "فلټرونه پاک کړئ"
+    },
+    "subjects": {
+      "IT": "آی‌ټي",
+      "ENGLISH": "انګلیسي",
+      "AI": "مصنوعي ځیرکتیا"
+    },
+    "levels": {
+      "BEGINNER": "پیل کوونکی",
+      "INTERMEDIATE": "منځنی",
+      "ADVANCED": "پرمختللی"
+    },
+    "card": {
+      "duration": "{hours, plural, =0 {له یوه ساعت لږ} other {شاوخوا {hoursText} ساعته}}",
+      "view": "کورس وګورئ"
+    },
+    "count": "{count, plural, =0 {هیڅ کورس نشته} other {{countText} کورسونه}}",
+    "empty": {
+      "heading": "د دې فلټرونو سره څه ونه موندل شول",
+      "body": "بله موضوع یا کچه وازمایئ، یا فلټرونه پاک کړئ چې ټول وګورئ."
+    },
+    "error": {
+      "heading": "کورسونه بار نه شول",
+      "body": "خپله اړیکه وګورئ او بیا هڅه وکړئ."
+    },
+    "pagination": {
+      "next": "نور کورسونه",
+      "previous": "شاته"
+    },
+    "translation": {
+      "notice": "په {language} ښودل کېږي — لا ژباړل شوی نه دی.",
+      "short": "په {language}"
+    },
+    "detail": {
+      "about": "د دې کورس په اړه",
+      "level": "کچه",
+      "subject": "موضوع",
+      "duration": "د زده‌کړې وخت",
+      "back": "ټول کورسونه",
+      "enrol": "زده‌کړه پیل کړئ",
+      "enrolSoon": "نوم‌لیکنه ډېر ژر پرانیستل کېږي",
+      "notFound": "دا کورس ونه موندل شو",
+      "notFoundBody": "کېدای شي نوم یې بدل شوی وي یا نور نه وړاندې کېږي."
     }
   }
 }

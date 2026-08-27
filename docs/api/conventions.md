@@ -127,6 +127,67 @@ Tighter than the global default, per client address, on top of it:
 Per-_account_ limits, which per-address limits cannot provide, are enforced in
 `AuthService` alongside the brute-force lockout.
 
+## Catalogue
+
+Public read endpoints. Design rationale for the multilingual storage is in
+[ADR 0008](../architecture/decisions/0008-multilingual-content-storage.md).
+
+| Method | Path                    | Auth   | Notes                                     |
+| ------ | ----------------------- | ------ | ----------------------------------------- |
+| `GET`  | `/api/v1/courses`       | public | cursor paginated; `subject`, `level`      |
+| `GET`  | `/api/v1/courses/:slug` | public | `404` for a draft, same as a missing slug |
+
+Both are `@Public()` — discovery is the front door, and a learner must be able
+to see what is on offer before creating an account. The global guard still runs
+and still attaches an actor when a session is present, which is what lets the
+same endpoints show unpublished courses to a caller holding
+`course:view_unpublished` without a second route.
+
+**Language.** Course text is selected from `Accept-Language`, which the web app
+sets from the active locale. An absent or unsupported value falls back to the
+default rather than erroring.
+
+Every course carries `textLocale` naming the language its text is **actually**
+in. That is not always the language requested: content is written by people and
+a translation may not exist yet, so the API falls back rather than returning an
+empty title. Clients must surface that — showing unmarked Dari to a Pashto
+reader leaves them unable to tell a missing translation from their own misreading.
+
+### Caching
+
+Catalogue responses carry `Vary: Accept-Language` alongside the `Origin` and
+`Accept-Encoding` that CORS and compression add. The header is **appended**, not
+assigned — overwriting it would drop the other two and trade one caching bug for
+two.
+
+This matters more than it looks. A shared cache keys on the URL plus whatever
+`Vary` names; an undeclared header means the first visitor's language is served
+to everyone after them, while the origin behaves perfectly and nothing in the
+logs looks wrong. `Vary` is also set on error responses, since a cached 404 has
+the same problem.
+
+ETags already differ per locale, and a conditional request carrying another
+locale's ETag correctly returns `200` rather than a false `304`.
+
+**`Cache-Control` is deliberately not set yet.** Correct `Vary` is a
+prerequisite for shared caching, not the whole of it: there is no CDN in front
+of the API, nothing can author a course yet so the real mutation rate is
+unknown, and there is no invalidation path for the moment a course _is_
+published. Adding a TTL now would be guessing at all three. Revisit when a CDN
+is actually deployed, and decide the TTL from the observed publish rate.
+
+### Unknown cursors
+
+A structurally valid cursor that matches no row returns `200` with an empty page
+rather than `400`.
+
+This is intended. A cursor goes stale for ordinary reasons — a bookmarked page,
+a back button, a course unpublished since the link was made — and none of them
+are client misuse. Returning an error would turn a normal stale-pagination state
+into a failure the client has to special-case, for no gain: an empty page and
+the end of a list are the same thing to a caller walking pages until
+`nextCursor` is null.
+
 ## Request correlation
 
 Send `x-request-id` and it is echoed back — but only if it matches

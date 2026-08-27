@@ -3,7 +3,17 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+
+    /* The Prisma seeds are run straight by Node's type stripping
+     * (`node prisma/seed.mts`), so a relative import between them has to name
+     * the real file — `./catalogue-seed.mts`. NodeNext otherwise demands the
+     * emitted `.mjs` name, which does not exist on disk and fails at runtime.
+     * This flag reconciles the two: TypeScript accepts the `.mts` specifier and
+     * would rewrite it on emit. Nothing under src/ is affected — those import
+     * with `.js` specifiers — and tsconfig.build.json compiles src/ only, so
+     * the seeds are typechecked here and never emitted. */
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src/**/*", "test/**/*", "prisma/**/*.mts", "*.config.ts", "*.config.mts"],
   "exclude": ["node_modules", "dist", "generated"]

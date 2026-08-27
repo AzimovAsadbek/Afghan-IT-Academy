@@ -41,7 +41,7 @@ works in development and in the built output.
 
 ## Current schema
 
-Foundation scope only — identity core and audit log.
+Identity, audit and catalogue.
 
 | Table        | Purpose                                                                           |
 | ------------ | --------------------------------------------------------------------------------- |
@@ -54,6 +54,21 @@ deletion of the account it describes, which is precisely when it matters most.
 The `Locale` enum mirrors `LOCALES` in `@afghan-it-academy/shared`, so the
 database rejects an unsupported locale rather than storing it and failing at
 render time.
+
+### Catalogue
+
+| Table                 | Purpose                                                                  |
+| --------------------- | ------------------------------------------------------------------------ |
+| `subjects`            | Top-level areas of study. `key` is contract; names are client-translated |
+| `courses`             | Locale-independent facts: slug, level, status, duration                  |
+| `course_translations` | Author-written text, one row per `(courseId, locale)`                    |
+
+A course may legitimately lack a translation, so the read path resolves against
+a fallback chain and reports which locale it used. See
+[ADR 0008](../architecture/decisions/0008-multilingual-content-storage.md).
+
+`courses.slug` is unique and not localised: one stable URL per course keeps a
+link shared over WhatsApp working for a speaker of any of the three languages.
 
 ## Why the other domains are not modelled yet
 

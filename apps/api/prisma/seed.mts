@@ -11,6 +11,7 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 
 import { PrismaClient } from '../generated/prisma/index.js';
+import { seedCatalogue } from './catalogue-seed.mts';
 
 /**
  * Loads the repository-root .env, the same file docker-compose reads.
@@ -196,6 +197,8 @@ async function main(): Promise<void> {
       }
     });
 
+    await seedCatalogue(prisma);
+
     const [roleCount, permissionCount, grantCount] = await Promise.all([
       prisma.role.count(),
       prisma.permission.count(),
@@ -203,7 +206,8 @@ async function main(): Promise<void> {
     ]);
 
     console.warn(
-      `Seed complete: ${String(roleCount)} roles, ${String(permissionCount)} permissions, ${String(grantCount)} grants.`,
+      `Seed complete: ${String(roleCount)} roles, ${String(permissionCount)} permissions, ${String(grantCount)} grants, ` +
+        `${String(await prisma.subject.count())} subjects, ${String(await prisma.course.count())} courses.`,
     );
   } finally {
     await prisma.$disconnect();

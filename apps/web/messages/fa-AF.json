@@ -30,7 +30,7 @@
       "password": "رمز عبور",
       "newPassword": "رمز عبور جدید",
       "currentPassword": "رمز عبور فعلی",
-      "passwordHint": "حداقل {min, number} حرف.",
+      "passwordHint": "حداقل {min} حرف.",
       "showPassword": "نمایش رمز عبور",
       "hidePassword": "پنهان کردن رمز عبور",
       "back": "بازگشت",
@@ -92,7 +92,7 @@
       "unknownDevice": "دستگاه ناشناس",
       "revoke": "خروج این دستگاه",
       "revokeOthers": "خروج همه‌ی دستگاه‌های دیگر",
-      "revokedOthers": "{count, plural, =0 {دستگاه دیگری وارد نشده بود.} one {یک دستگاه دیگر خارج شد.} other {# دستگاه دیگر خارج شدند.}}"
+      "revokedOthers": "{count, plural, =0 {دستگاه دیگری وارد نشده بود.} one {یک دستگاه دیگر خارج شد.} other {{countText} دستگاه دیگر خارج شدند.}}"
     }
   },
   "errors": {
@@ -122,6 +122,59 @@
       "invalid_token": "این لینک معتبر نیست.",
       "must_differ": "رمز عبوری متفاوت از رمز فعلی انتخاب کنید.",
       "unknown": "این مقدار پذیرفته نمی‌شود."
+    }
+  },
+  "catalogue": {
+    "title": "کورس‌ها",
+    "subtitle": "کورس‌های عملی آی‌تی، انگلیسی و هوش مصنوعی که با موبایل هم تمام می‌شوند.",
+    "filters": {
+      "heading": "محدود کردن نتایج",
+      "subject": "موضوع",
+      "level": "سطح",
+      "all": "همه",
+      "clear": "پاک کردن فیلترها"
+    },
+    "subjects": {
+      "IT": "آی‌تی",
+      "ENGLISH": "انگلیسی",
+      "AI": "هوش مصنوعی"
+    },
+    "levels": {
+      "BEGINNER": "مبتدی",
+      "INTERMEDIATE": "متوسط",
+      "ADVANCED": "پیشرفته"
+    },
+    "card": {
+      "duration": "{hours, plural, =0 {کمتر از یک ساعت} other {حدود {hoursText} ساعت}}",
+      "view": "دیدن کورس"
+    },
+    "count": "{count, plural, =0 {بدون کورس} other {{countText} کورس}}",
+    "empty": {
+      "heading": "چیزی با این فیلترها پیدا نشد",
+      "body": "موضوع یا سطح دیگری را امتحان کنید، یا فیلترها را پاک کنید تا همه را ببینید."
+    },
+    "error": {
+      "heading": "کورس‌ها بارگیری نشدند",
+      "body": "اتصال خود را بررسی کنید و دوباره کوشش کنید."
+    },
+    "pagination": {
+      "next": "کورس‌های بیشتر",
+      "previous": "بازگشت"
+    },
+    "translation": {
+      "notice": "به {language} نمایش داده می‌شود — هنوز ترجمه نشده است.",
+      "short": "به {language}"
+    },
+    "detail": {
+      "about": "درباره‌ی این کورس",
+      "level": "سطح",
+      "subject": "موضوع",
+      "duration": "زمان مطالعه",
+      "back": "همه‌ی کورس‌ها",
+      "enrol": "شروع آموزش",
+      "enrolSoon": "ثبت‌نام به‌زودی باز می‌شود",
+      "notFound": "این کورس پیدا نشد",
+      "notFoundBody": "شاید نام آن تغییر کرده یا دیگر ارائه نمی‌شود."
     }
   }
 }

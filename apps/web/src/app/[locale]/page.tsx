@@ -4,6 +4,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { use } from 'react';
 
 import { LocaleSwitcher } from '@/components/locale-switcher';
+import { Link } from '@/i18n/navigation';
 
 /**
  * Foundation landing page.
@@ -37,7 +38,14 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
         <p className="text-ink-700 text-pretty text-lg">{t('subheadline')}</p>
 
         <div className="flex flex-wrap gap-3">
-          <Button size="lg">{t('primaryCta')}</Button>
+          {/* The catalogue is the product's front door; the homepage button
+              that names it should actually open it. */}
+          <Link
+            href="/courses"
+            className="bg-brand-600 hover:bg-brand-700 active:bg-brand-800 focus-visible:outline-brand-600 h-13 inline-flex items-center justify-center rounded-lg px-7 text-lg font-medium text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            {t('primaryCta')}
+          </Link>
           <Button size="lg" variant="secondary">
             {t('secondaryCta')}
           </Button>

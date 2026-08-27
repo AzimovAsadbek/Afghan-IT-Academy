@@ -9,6 +9,7 @@ import { AppConfigModule, ENV, type Env } from './config/index.js';
 import { PrismaModule } from './infrastructure/prisma/index.js';
 import { RedisModule, RedisService } from './infrastructure/redis/index.js';
 import { AuditModule } from './modules/audit/index.js';
+import { CatalogueModule } from './modules/catalogue/index.js';
 import { HealthModule } from './modules/health/index.js';
 import { IdentityModule } from './modules/identity/index.js';
 import { NotificationsModule } from './modules/notifications/index.js';
@@ -58,6 +59,7 @@ import { NotificationsModule } from './modules/notifications/index.js';
 
     HealthModule,
     IdentityModule,
+    CatalogueModule,
   ],
   providers: [
     /* Order matters: throttle before authenticating, so a flood of anonymous
