@@ -28,3 +28,15 @@
 # entry covers only the historical commit, whose diff cannot be changed without
 # rewriting published history.
 307f07381803ce0f7971470984036462af85187b:apps/api/test/catalogue.e2e-spec.ts:generic-api-key:26
+
+# The comment that used to sit at line 15 of this very file, as it stood in
+# 87d6c55.
+#
+# Explaining the entry above, that comment reproduced the flagged constant
+# verbatim — so the scanner matched the ignore file itself. The quote was
+# removed in 3a94940, but a later commit cannot change an earlier commit's
+# diff, and gitleaks scans diffs. Hence a second fingerprint for the same
+# reviewed value in a second historical commit.
+#
+# This is why the rule above says not to quote a flagged value here.
+87d6c5587f92b1c9432c9d0fcb856cda44d1423d:.gitleaksignore:generic-api-key:15
